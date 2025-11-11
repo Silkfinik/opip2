@@ -29,7 +29,7 @@
       body {
         font-family: "Inter", sans-serif;
         -webkit-tap-highlight-color: transparent;
-        background-color: #0f172a;
+        background-color: #0f172a; /* slate-900 */
         position: relative;
       }
       body::after {
@@ -243,7 +243,6 @@
         "уточните",
         "обоснуйте",
         "нет",
-        "не",
         "нет, не",
         "не согласен",
         "давайте вернемся",
@@ -290,6 +289,16 @@
           "исправим",
           "компенсируем",
           "недосмотрели",
+          "наша вина",
+          "признаю",
+          "не подумали",
+          "не учли",
+          "мой промах",
+          "действительно",
+          "вышло неловко",
+          "понимаю ваше",
+          "постараемся",
+          "неприятно вышло",
         ],
         FEAR: [
           "хорошо, давайте",
@@ -310,6 +319,17 @@
           "последствия",
           "потеряем",
           "не успеем",
+          "давайте быстрее",
+          "нужно спешить",
+          "не хотелось бы",
+          "опасаемся",
+          "главное чтобы",
+          "успеть бы",
+          "принимается",
+          "согласен, давайте",
+          "хорошо, только",
+          "ваше условие",
+          "уже делаем",
         ],
         AUTHORITY: [
           "вам виднее",
@@ -328,6 +348,16 @@
           "вы правы",
           "не спорю",
           "полагаемся",
+          "раз вы настаиваете",
+          "поверим вам",
+          "вы эксперт",
+          "некомпетентны",
+          "не разбираемся",
+          "на ваше усмотрение",
+          "да, конечно",
+          "бесспорно",
+          "принято",
+          "не знали",
         ],
         FLATTERY: [
           "спасибо",
@@ -344,6 +374,16 @@
           "засмущали",
           "лучшие",
           "профессионалы",
+          "благодарю",
+          "очень признателен",
+          "отличная работа",
+          "вы молодец",
+          "как всегда на высоте",
+          "потрясающе",
+          "приятно иметь дело",
+          "ценим",
+          "здорово",
+          "круто",
         ],
       };
 
@@ -418,9 +458,9 @@
         return [displayedJsx, isDone];
       }
 
-      function generateSessionId() {
-        return "user_" + Math.random().toString(36).substring(2, 10);
-      }
+      // --- ИЗМЕНЕНИЕ (СОХРАНЕНИЕ) ---
+      // Функция generateSessionId() удалена, т.к. ID теперь генерируется
+      // и сохраняется в localStorage в главном useEffect.
 
       function App() {
         const [gameState, setGameState] = useState("auth");
@@ -433,11 +473,52 @@
         const [showInitialDictionary, setShowInitialDictionary] =
           useState(false);
 
+        // --- ИЗМЕНЕНИЕ (СОХРАНЕНИЕ) ---
+        // Этот useEffect теперь управляет ID пользователя и логикой
+        // автоматического переподключения к игре при обновлении страницы.
         useEffect(() => {
-          const sid = generateSessionId();
-          setUserId(sid);
+          // 1. Получаем или создаем UserId
+          let uid = localStorage.getItem("negotiator_userId");
+          if (!uid) {
+            uid = "user_" + Math.random().toString(36).substring(2, 10);
+            localStorage.setItem("negotiator_userId", uid);
+          }
+          setUserId(uid);
+
+          // 2. Анонимный вход в Firebase
           signInAnonymously(window.auth)
-            .then(() => setGameState("lobby"))
+            .then(async () => {
+              // 3. Проверяем, не были ли мы уже в игре
+              const storedGameId = localStorage.getItem("negotiator_gameId");
+              const storedMyTeam = localStorage.getItem("negotiator_myTeam");
+
+              if (storedGameId && storedMyTeam) {
+                // Если да, пытаемся переподключиться
+                const gameRef = doc(window.db, "games", storedGameId);
+                const gameSnap = await getDoc(gameRef);
+
+                if (gameSnap.exists()) {
+                  const gameData = gameSnap.data();
+                  // Проверяем, что игрок все еще числится в этой команде
+                  if (gameData.players?.[storedMyTeam]?.includes(uid)) {
+                    setGameId(storedGameId);
+                    setMyTeam(storedMyTeam);
+                    setGameState("game"); // Сразу входим в игру
+                    return; // Выходим
+                  } else {
+                    // Игрок не в игре (возможно, кикнут или игра сброшена)
+                    localStorage.removeItem("negotiator_gameId");
+                    localStorage.removeItem("negotiator_myTeam");
+                  }
+                } else {
+                  // Игра с таким ID не найдена
+                  localStorage.removeItem("negotiator_gameId");
+                  localStorage.removeItem("negotiator_myTeam");
+                }
+              }
+              // 4. Если не в игре, по умолчанию идем в лобби
+              setGameState("lobby");
+            })
             .catch((e) => setError("Ошибка подключения: " + e.message));
         }, []);
 
@@ -465,6 +546,10 @@
               } else {
                 if (["game", "revealed", "team_select"].includes(gameState)) {
                   setError("Сессия завершена.");
+                  // --- ИЗМЕНЕНИЕ (СОХРАНЕНИЕ) ---
+                  // Очищаем localStorage, если сессия завершена
+                  localStorage.removeItem("negotiator_gameId");
+                  localStorage.removeItem("negotiator_myTeam");
                   setGameState("lobby");
                   setGameData(null);
                   setGameId("");
@@ -512,8 +597,11 @@
           };
         }, [gameId, userId, gameState, myTeam]);
 
+        // --- ИЗМЕНЕНИЕ (СОХРАНЕНИЕ) ---
+        // Сохраняем команду в localStorage
         const enterGame = async (team) => {
           setMyTeam(team);
+          localStorage.setItem("negotiator_myTeam", team);
           await updateDoc(doc(window.db, "games", gameId), {
             [`players.${team}`]: arrayUnion(userId),
           });
@@ -533,6 +621,9 @@
                 }
                 const snap = await getDoc(doc(window.db, "games", id));
                 if (snap.exists()) {
+                  // --- ИЗМЕНЕНИЕ (СОХРАНЕНИЕ) ---
+                  // Сохраняем ID игры при входе
+                  localStorage.setItem("negotiator_gameId", id);
                   setGameId(id);
                   setGameState("team_select");
                 } else {
@@ -550,6 +641,9 @@
             <TeamSelect
               onSelect={enterGame}
               onBack={() => {
+                // --- ИЗМЕНЕНИЕ (СОХРАНЕНИЕ) ---
+                // Очищаем ID игры при выходе назад в лобби
+                localStorage.removeItem("negotiator_gameId");
                 setGameId("");
                 setGameState("lobby");
               }}
@@ -590,6 +684,10 @@
               gameData={gameData}
               myTeam={myTeam}
               onExit={() => {
+                // --- ИЗМЕНЕНИЕ (СОХРАНЕНИЕ) ---
+                // Очищаем все данные об игре при выходе
+                localStorage.removeItem("negotiator_gameId");
+                localStorage.removeItem("negotiator_myTeam");
                 setGameId("");
                 setGameState("lobby");
               }}
@@ -611,10 +709,6 @@
       function Lobby({ onJoin, error, setError }) {
         const [joinId, setJoinId] = useState("");
         const [key, setKey] = useState(0);
-        const [typedTitle, isTitleDone] = useTypewriter(
-          "ТЕСТ 'ПЕРЕГОВОРЩИК'",
-          60
-        );
 
         useEffect(() => {
           if (error) setKey((k) => k + 1);
@@ -623,14 +717,7 @@
         return (
           <div className="flex flex-col items-center justify-center h-full p-6 bg-slate-900 text-slate-300 reveal-animation">
             <div className="w-full max-w-md text-center">
-              <h1
-                className={`font-bold text-2xl md:text-3xl text-blue-400 text-glow mb-2 inline-block ${
-                  isTitleDone ? "typing-caret-done" : "typing-caret"
-                }`}
-              >
-                {typedTitle}
-              </h1>
-              <div className="text-xs text-slate-400 mb-8 font-mono">
+              <div className="text-lg text-slate-400 mb-8 font-mono mt-8">
                 ТЕРМИНАЛ БЕЗОПАСНОГО ДОСТУПА
               </div>
 
@@ -647,7 +734,7 @@
               {error && (
                 <div
                   key={key}
-                  className="text-red-500 p-3 text-xs font-mono mb-4 border border-red-500/50 bg-red-900/20 animate-flicker"
+                  className="text-red-500 p-3 text-xs font-mono mb-4 border border-red-500/50 bg-red-900/20 animate-flicker rounded-lg"
                 >
                   [X] AUTH_ERROR: {error}
                 </div>
@@ -669,14 +756,14 @@
                   value={joinId}
                   onChange={(e) => setJoinId(e.target.value.toUpperCase())}
                   placeholder="XXXXX"
-                  className="w-full p-4 bg-slate-800 border-2 border-slate-700 text-white font-mono text-xl uppercase tracking-widest focus:border-blue-500 outline-none transition text-center placeholder:text-slate-500"
+                  className="w-full p-4 bg-slate-800 border-none rounded-lg text-white font-mono text-xl uppercase tracking-widest focus:border-blue-500 outline-none transition text-center placeholder:text-slate-500"
                   maxLength={10}
                   onFocus={() => setError("")}
                 />
                 <button
                   onClick={() => onJoin(joinId)}
                   disabled={!joinId}
-                  className="w-full py-4 bg-blue-600 text-white font-bold tracking-widest hover:bg-blue-500 transition disabled:opacity-50"
+                  className="w-full py-4 bg-blue-600 text-white font-bold tracking-widest hover:bg-blue-500 transition disabled:opacity-50 rounded-lg"
                 >
                   [ ПОДКЛЮЧИТЬСЯ → ]
                 </button>
@@ -703,7 +790,7 @@
         const isScout = initialDuration === 5;
 
         return (
-          <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm text-white z-50 flex flex-col p-6 reveal-animation">
+          <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm text-white z-50 flex flex-col p-4 sm:p-6 reveal-animation">
             <div className="flex justify-between items-center mb-2 font-mono">
               <h2 className="text-lg font-bold tracking-widest text-red-500 animate-flicker text-glow-red">
                 {isScout ? "ПЕРЕХВАТ ДАННЫХ" : "БАЗА ЗНАНИЙ"} [ TOP SECRET ]
@@ -711,7 +798,7 @@
               <div className="text-xl font-bold">{timeLeft}s</div>
             </div>
 
-            <p className="text-yellow-400 font-mono text-xs mb-4 border border-yellow-500/50 bg-yellow-900/20 p-3">
+            <p className="text-yellow-400 font-mono text-xs mb-4 border border-yellow-500/50 bg-yellow-900/20 p-3 rounded-lg">
               [!] ВНИМАНИЕ: Эти слова — ключ к атаке и защите. Система
               отслеживает их. Запомните как можно больше.
             </p>
@@ -721,7 +808,7 @@
                 {ALL_KEYWORDS.map((word, i) => (
                   <span
                     key={i}
-                    className="bg-slate-700 text-slate-300 px-3 py-2 text-sm font-mono lowercase border border-slate-600"
+                    className="bg-slate-700 text-slate-300 px-3 py-2 text-sm font-mono lowercase border border-slate-600 rounded"
                   >
                     <span className="opacity-50 mr-1">></span>
                     {word}
@@ -737,7 +824,7 @@
             </div>
             <button
               onClick={onClose}
-              className="w-full py-4 bg-white text-slate-900 font-bold font-mono tracking-widest hover:bg-slate-200 transition mt-6"
+              className="w-full py-4 bg-white text-slate-900 font-bold font-mono tracking-widest hover:bg-slate-200 transition mt-6 rounded-lg"
             >
               {isScout ? "ЗАКРЫТЬ [ -> ]" : "ПРОПУСТИТЬ [ -> ]"}
             </button>
@@ -801,7 +888,7 @@
         return (
           <button
             onClick={onClick}
-            className={`group p-6 text-left transition-all active:scale-[0.98] bg-slate-800 border-2 border-slate-700 ${hoverBorder} hover:bg-slate-700/50 animate-pop-in`}
+            className={`group p-6 text-left transition-all active:scale-[0.98] bg-slate-800 border-2 border-slate-700 ${hoverBorder} hover:bg-slate-700/50 animate-pop-in rounded-lg`}
             style={{ animationDelay: `${delay}ms` }}
           >
             <div
@@ -893,7 +980,7 @@
                 {goals.map((goal, i) => (
                   <li
                     key={i}
-                    className="flex gap-4 p-4 bg-slate-800 border border-slate-700"
+                    className="flex gap-4 p-4 bg-slate-800 border border-slate-700 rounded-lg"
                   >
                     <span className={`font-mono ${theme.accent}`}>
                       0{i + 1}.
@@ -914,92 +1001,90 @@
 
             <div className="mb-6">
               <h4 className="font-bold text-slate-100 mb-2">
-                Тактические маркеры:
+                Тактические ходы:
               </h4>
-              <div className="text-sm space-y-3 text-slate-300 bg-slate-800 p-4 border border-slate-700">
+              <div className="text-sm space-y-3 text-slate-300 bg-slate-800 p-4 border border-slate-700 rounded-lg">
                 <p>
-                  Под полем ввода вы видите 4 тактики. Это не "волшебные
-                  кнопки", а <strong>маркеры для системы</strong>.
+                  Четыре кнопки под полем ввода — это{" "}
+                  <strong>ваш тактический ход</strong>.
                 </p>
                 <ol className="list-decimal list-inside space-y-2 pl-2">
+                  <li>Сначала вы пишете сообщение.</li>
                   <li>
-                    Вы пишете сообщение, цель которого —{" "}
-                    <strong>вызвать у оппонента нужную реакцию</strong>.
+                    Перед отправкой выберите кнопку (например, `ПОТОРОПИТЬ /
+                    ДАВИТЬ`), которая лучше всего описывает{" "}
+                    <strong>ваше намерение</strong>.
                   </li>
                   <li>
-                    <strong>Перед отправкой</strong> вы нажимаете
-                    соответствующую кнопку (напр., `ВЫЗВАТЬ ИЗВИНЕНИЯ`).
-                  </li>
-                  <li>
-                    Система проанализирует, *действительно* ли оппонент
-                    использовал уязвимые слова в своем *ответе*.
+                    Система оценит, насколько <strong>успешным</strong> был ваш
+                    ход.
                   </li>
                 </ol>
                 <p
-                  className={`font-mono text-xs ${theme.accent} p-3 bg-slate-900 border border-slate-700`}
+                  className={`font-mono text-xs ${theme.accent} p-3 bg-slate-900 border border-slate-700 rounded`}
                 >
-                  <strong>ВАЖНО:</strong> Система фиксирует только явные
-                  вербальные уязвимости. Если оппонент не поддался на уловку или
-                  ответил нейтрально, ваша попытка не будет засчитана.
+                  <strong>ВАЖНО:</strong> Ваш выбор хода и ваши слова должны
+                  совпадать. Система следит за этим.
                 </p>
               </div>
             </div>
 
             <div className="mb-6">
               <h4 className="font-bold text-slate-100 mb-2">
-                Ресурс: Хладнокровие
+                Ресурс: Щит Хладнокровия
               </h4>
-              <div className="text-sm space-y-3 text-slate-300 bg-slate-800 p-4 border border-slate-700">
+              <div className="text-sm space-y-3 text-slate-300 bg-slate-800 p-4 border border-slate-700 rounded-lg">
                 <p>
-                  Система анализирует ваш уровень **ХЛАДНОКРОВИЯ** — ресурс,
-                  показывающий вашу способность твердо держать позицию.
+                  Полоса над тактиками — ваш <strong>Щит Хладнокровия</strong>.
+                  Он показывает вашу способность твердо держать позицию.
                 </p>
                 <ul className="list-disc list-inside space-y-2 pl-2">
                   <li>
-                    Апеллирование к весомым аргументам (ссылки на *факты*,
-                    *договоры*, *анализ*) требует высокой концентрации и
-                    **тратит** ваш запас ХЛАДНОКРОВИЯ.
+                    Использование <strong>весомых аргументов</strong> (нужные
+                    слова нужно найти в "базе данных") — мощный, но{" "}
+                    <strong>затратный</strong> ход. Он{" "}
+                    <strong>расходует</strong> ваш щит.
                   </li>
                   <li>
-                    Когда ХЛАДНОКРОВИЕ **иссякнет (0)**, ваша позиция станет
-                    уязвимой. Ваши аргументы временно **перестанут**
-                    восприниматься системой как весомые.
+                    Когда щит <strong>иссякнет (0)</strong>, ваши аргументы{" "}
+                    <strong>временно теряют вес</strong> и вы становитесь
+                    уязвимы.
                   </li>
                   <li>
-                    Запас восстанавливается (только **в конце хода**), если вы
-                    **ни разу** не прибегали к этим маркерам.
+                    Щит <strong>восстанавливается</strong> (в конце раунда),
+                    если вы воздержались от использования этих затратных
+                    приемов.
                   </li>
                 </ul>
                 <p
-                  className={`font-mono text-xs ${theme.accent} p-3 bg-slate-900 border border-slate-700`}
+                  className={`font-mono text-xs ${theme.accent} p-3 bg-slate-900 border border-slate-700 rounded`}
                 >
-                  <strong>ВАЖНО:</strong> Вы видите только свой запас.
-                  Контролируйте этот ресурс, чтобы не "перегореть" в
-                  ответственный момент.
+                  <strong>ВАЖНО:</strong> Это ваш главный защитный ресурс.
+                  Расходуйте его с умом.
                 </p>
               </div>
             </div>
 
             <div>
               <h4 className="font-bold text-slate-100 mb-2">
-                Протокол связи и Роли:
+                Протокол связи и роли:
               </h4>
               <ul className="space-y-3 text-sm text-slate-300">
-                <li className="flex gap-3 p-3 bg-slate-800 border border-slate-700">
+                <li className="flex gap-3 p-3 bg-slate-800 border border-slate-700 rounded-lg">
                   <span className={`font-mono ${theme.accent}`}>01.</span>
                   <span>
                     <strong>РЕЖИM РАЦИИ:</strong> Строгая очередность. Завершил
                     мысль — передай канал.
                   </span>
                 </li>
-                <li className="flex gap-3 p-3 bg-slate-800 border border-slate-700">
+                <li className="flex gap-3 p-3 bg-slate-800 border border-slate-700 rounded-lg">
                   <span className={`font-mono ${theme.accent}`}>02.</span>
                   <span>
                     <strong>СПИКЕР (Единый голос):</strong> В эфире только один
                     Спикер от группы. Он принимает решения и ведет диалог.
                   </span>
                 </li>
-                <li className="flex gap-3 p-3 bg-slate-800 border border-slate-700">
+                <li className="flex gap-3 p-3 bg-slate-800 border border-slate-700 rounded-lg">
                   <span className={`font-mono ${theme.accent}`}>03.</span>
                   <span>
                     <strong>РАЗВЕДЧИК (Анализ данных):</strong> Периодически
@@ -1014,12 +1099,14 @@
         );
 
         return (
-          <div className="fixed inset-0 bg-slate-900 text-slate-200 z-50 flex items-center justify-center p-6 reveal-animation">
-            <div className="max-w-3xl w-full bg-slate-800/80 backdrop-blur-sm border border-slate-700 shadow-2xl max-h-[90vh] flex flex-col">
-              <div className={`p-6 border-b ${theme.border}`}>
-                <div className="flex justify-between items-center mb-2">
+          <div className="fixed inset-0 bg-slate-900 text-slate-200 z-50 flex flex-col w-full h-full reveal-animation">
+            <div className="w-full h-full bg-slate-900 flex flex-col">
+              <div
+                className={`p-4 bg-slate-800 border-b ${theme.border} flex-shrink-0`}
+              >
+                <div className="flex justify-between items-center mb-1">
                   <h2
-                    className={`text-2xl font-bold text-white tracking-tighter ${
+                    className={`text-xl font-bold text-white tracking-tighter ${
                       theme.glow
                     } inline-block ${
                       isTitleDone ? "typing-caret-done" : "typing-caret"
@@ -1028,17 +1115,17 @@
                     {typedTitle}
                   </h2>
                   <span
-                    className={`px-3 py-1 ${theme.bg} text-white text-xs font-mono font-bold tracking-widest`}
+                    className={`px-3 py-1 ${theme.bg} text-white text-xs font-mono font-bold tracking-widest rounded-full`}
                   >
-                    СТОРОНА: {team.toUpperCase()}
+                    {team.toUpperCase()}
                   </span>
                 </div>
                 <div className={`text-xs ${theme.accent} font-mono`}>
-                  ЛОКАЦИЯ: Женева, Швейцария // СТАТУС: АКТИВНЫЙ
+                  СТАТУС: АКТИВНЫЙ
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row border-b border-slate-700">
+              <div className="flex flex-col sm:flex-row border-b border-slate-700 flex-shrink-0">
                 {TABS.map((tab) => (
                   <button
                     key={tab.id}
@@ -1054,16 +1141,16 @@
                 ))}
               </div>
 
-              <div className="p-6 overflow-y-auto scrollbar-hide">
+              <div className="p-4 overflow-y-auto scrollbar-hide">
                 {view === "briefing" && <BriefingContent />}
                 {view === "goals" && <GoalsContent />}
                 {view === "tools" && <ToolsContent />}
               </div>
 
-              <div className="p-6 border-t border-slate-700 bg-slate-900/50 mt-auto">
+              <div className="p-4 border-t border-slate-700 bg-slate-800 mt-auto flex-shrink-0">
                 <button
                   onClick={onStart}
-                  className="w-full py-4 bg-white text-slate-900 font-bold font-mono tracking-widest hover:bg-slate-200 transition"
+                  className="w-full py-4 bg-white text-slate-900 font-bold font-mono tracking-widest hover:bg-slate-200 transition rounded-lg"
                 >
                   [ ПРИНЯТЬ БРИФИНГ ⏵ ]
                 </button>
@@ -1080,14 +1167,18 @@
           <div
             className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}
           >
-            <div className="text-[10px] font-mono text-slate-400 mb-1 uppercase">
+            <div className="text-[10px] font-mono text-slate-400 mb-1 mx-2 uppercase">
               {team}
             </div>
+            {/* // --- ИЗМЕНЕНИЕ (ФОРМАТИРОВАНИЕ) ---
+              // Добавлен класс 'whitespace-pre-wrap' для 
+              // корректного отображения переносов строк (Enter).
+            */}
             <div
-              className={`max-w-[85%] p-4 text-sm break-words ${
+              className={`max-w-[80%] p-3 text-sm break-words rounded-2xl whitespace-pre-wrap ${
                 isMe
-                  ? `bg-slate-700 border-r-4 ${themeColors.border} text-white`
-                  : "bg-slate-600/50 border-l-4 border-slate-500 text-slate-200"
+                  ? `${themeColors.buttonBg} text-white rounded-br-lg`
+                  : "bg-slate-700 text-slate-200 rounded-bl-lg"
               }`}
             >
               <span
@@ -1108,6 +1199,8 @@
         const [isMyScoutTurn, setIsMyScoutTurn] = useState(false);
         const [isSending, setIsSending] = useState(false);
         const chatRef = useRef();
+
+        const myAttackCounts = gameData.attacks?.[myTeam];
 
         const isMyTurn = gameData.turn === myTeam;
         const isMySpeaker = gameData.speakers?.[myTeam] === userId;
@@ -1246,11 +1339,27 @@
             updates.pendingAttack = null;
           }
 
-          if (selectedManipulation)
-            updates.pendingAttack = {
-              team: myTeam,
-              type: selectedManipulation,
-            };
+          // --- БЛОК ИЗМЕНЕН ---
+          let attackWasSent = false;
+          if (selectedManipulation) {
+            const currentAttackCount =
+              gameData.attacks?.[myTeam]?.[selectedManipulation] || 0;
+
+            if (currentAttackCount > 0) {
+              // Атака тратится
+              updates.pendingAttack = {
+                team: myTeam,
+                type: selectedManipulation,
+              };
+              // Уменьшаем счетчик в базе данных
+              updates[`attacks.${myTeam}.${selectedManipulation}`] =
+                currentAttackCount - 1;
+              attackWasSent = true;
+            } else {
+              // Атака не тратится (счетчик 0), просто отправляем сообщение
+              // attackWasSent остается false
+            }
+          }
 
           try {
             await updateDoc(doc(window.db, "games", gameId), updates);
@@ -1258,11 +1367,13 @@
             console.error("Update failed:", err);
           } finally {
             setIsSending(false);
-            if (selectedManipulation) {
+            // Только если атака была успешно отправлена (а не просто выбрана)
+            if (attackWasSent) {
               setHasAttackedThisTurn(true);
             }
             setSelectedManipulation(null);
           }
+          // --- КОНЕЦ БЛОКА ---
         };
 
         const handleEndTurn = async () => {
@@ -1319,36 +1430,32 @@
           }
         };
 
+        const myStatus = isMyTurn
+          ? isMySpeaker
+            ? "ACTIVE_SPEAKER"
+            : userId === myScoutId
+            ? "ACTIVE_SCOUT"
+            : "OBSERVER"
+          : "STANDBY";
+
         return (
-          <div className="flex flex-col h-full bg-slate-800 max-w-3xl mx-auto shadow-xl reveal-animation">
-            <div className="p-4 bg-slate-900 text-slate-400 flex justify-between items-center text-xs font-mono">
-              <div className="flex items-center gap-2">
-                <div className="text-white font-bold tracking-widest">
+          <div className="flex flex-col h-full bg-slate-900 w-full reveal-animation">
+            <div className="p-4 bg-slate-800 text-slate-300 flex justify-between items-center text-xs font-mono border-b border-slate-700 flex-shrink-0">
+              <div className="flex flex-col">
+                <div className="text-white font-bold tracking-widest text-sm">
                   {gameId}
                 </div>
-                <div className="opacity-50">
-                  [{userId.slice(-5).toUpperCase()}]
-                </div>
-                <div className="ml-4">
-                  STATUS:{" "}
-                  {isMyTurn
-                    ? isMySpeaker
-                      ? "ACTIVE_SPEAKER"
-                      : userId === myScoutId
-                      ? "ACTIVE_SCOUT"
-                      : "OBSERVER"
-                    : "STANDBY"}
-                </div>
+                <div className="text-xs text-slate-400">{myStatus}</div>
               </div>
               <div
-                className={`w-2 h-2 ${
+                className={`w-3 h-3 rounded-full ${
                   isMyTurn ? "bg-green-500 animate-pulse" : "bg-red-500"
                 }`}
               ></div>
             </div>
 
             <div
-              className="flex-1 overflow-y-auto p-4 space-y-6 bg-slate-800"
+              className="flex-1 overflow-y-auto p-4 space-y-6 bg-slate-900"
               ref={chatRef}
             >
               {gameData.messages.map((msg, i) => {
@@ -1366,9 +1473,9 @@
               })}
             </div>
 
-            <div className="bg-slate-900 border-t border-slate-700 p-4 pb-safe">
+            <div className="bg-slate-800 border-t border-slate-700 p-2 pb-safe">
               {!isMyTurn ? (
-                <div className="text-center text-slate-500 py-4 font-mono text-xs tracking-widest border-2 border-dashed border-slate-700">
+                <div className="text-center text-slate-500 py-4 font-mono text-xs tracking-widest border-2 border-dashed border-slate-700 rounded-lg m-2">
                   <div className="flex items-center justify-center gap-3 mb-2">
                     <div className="w-2 h-2 bg-red-500 animate-pulse"></div>
                     <span className="text-red-500">[X] КАНАЛ ЗАКРЫТ</span>
@@ -1378,7 +1485,7 @@
                   </div>
                 </div>
               ) : !isMySpeaker ? (
-                <div className="text-center text-slate-500 py-4 font-mono text-xs tracking-widest border-2 border-dashed border-slate-700">
+                <div className="text-center text-slate-500 py-4 font-mono text-xs tracking-widest border-2 border-dashed border-slate-700 rounded-lg m-2">
                   <div className="flex items-center justify-center gap-3 mb-2">
                     <div className="w-2 h-2 bg-yellow-500 animate-pulse"></div>
                     <span className="text-yellow-500">[!] СПИКЕР НА ЛИНИИ</span>
@@ -1391,7 +1498,7 @@
                 </div>
               ) : (
                 <>
-                  <div className="px-0 pb-4">
+                  <div className="px-2 pt-2 pb-3">
                     <div className="text-xs font-mono uppercase text-slate-400 mb-2">
                       СТАТУС ХЛАДНОКРОВИЯ:
                     </div>
@@ -1399,7 +1506,7 @@
                       {[...Array(3)].map((_, i) => (
                         <div
                           key={i}
-                          className={`h-2 flex-1 transition-all ${
+                          className={`h-2 flex-1 transition-all rounded-full ${
                             i <
                             (gameData.shields?.[myTeam] !== undefined
                               ? gameData.shields[myTeam]
@@ -1417,33 +1524,44 @@
                     )}
                   </div>
 
-                  <div className="flex flex-wrap gap-2 pb-4">
-                    {Object.entries(MANIPULATION_TYPES).map(([key, data]) => (
-                      <button
-                        key={key}
-                        onClick={() =>
-                          setSelectedManipulation(
-                            selectedManipulation === key ? null : key
-                          )
-                        }
-                        disabled={hasAttackedThisTurn || isSending}
-                        className={`px-3 py-2 text-xs font-bold font-mono tracking-widest transition-all border-2 whitespace-nowrap ${
-                          selectedManipulation === key
-                            ? `${themeColors.buttonBg} ${themeColors.buttonText} ${themeColors.buttonBorder}`
-                            : "bg-slate-800 text-slate-300 border-slate-700"
-                        } ${
-                          hasAttackedThisTurn || isSending
-                            ? "opacity-30 cursor-not-allowed"
-                            : "hover:border-slate-500"
-                        }`}
-                      >
-                        {data.label}
-                      </button>
-                    ))}
+                  <div className="grid grid-cols-2 gap-2 p-2">
+                    {Object.entries(MANIPULATION_TYPES).map(([key, data]) => {
+                      // --- ДОБАВЛЕНО ---
+                      const count = myAttackCounts ? myAttackCounts[key] : 0;
+                      // --- КОНЕЦ ---
+
+                      return (
+                        <button
+                          key={key}
+                          onClick={() =>
+                            setSelectedManipulation(
+                              selectedManipulation === key ? null : key
+                            )
+                          }
+                          // --- ИЗМЕНЕНО: Добавлено || count <= 0 ---
+                          disabled={
+                            hasAttackedThisTurn || isSending || count <= 0
+                          }
+                          className={`py-3 px-2 text-xs font-bold font-mono tracking-widest transition-all border-2 rounded-lg text-center ${
+                            selectedManipulation === key
+                              ? `${themeColors.buttonBg} ${themeColors.buttonText} ${themeColors.buttonBorder}`
+                              : "bg-slate-700 text-slate-300 border-slate-700"
+                          } ${
+                            // --- ИЗМЕНЕНО: Добавлено || count <= 0 ---
+                            hasAttackedThisTurn || isSending || count <= 0
+                              ? "opacity-30 cursor-not-allowed"
+                              : "hover:border-slate-500"
+                          }`}
+                        >
+                          {/* // --- ИЗМЕНЕНО: Добавлен счетчик --- */}
+                          {data.label} ({count})
+                        </button>
+                      );
+                    })}
                   </div>
                   <form
                     onSubmit={handleSend}
-                    className="flex flex-col sm:flex-row gap-2 mb-2"
+                    className="flex flex-row gap-2 mb-2 items-center p-2"
                   >
                     <input
                       type="text"
@@ -1453,16 +1571,14 @@
                         isSending ? "ОТПРАВКА..." : "> Введите сообщение..."
                       }
                       disabled={isSending}
-                      className={`flex-1 bg-slate-700 border-2 border-slate-600 p-3 font-mono text-sm text-white ${
+                      className={`flex-1 bg-slate-700 border-none p-3 font-mono text-sm text-white rounded-full outline-none transition placeholder:text-slate-500 ${
                         themeColors.focusBorder
-                      } outline-none transition placeholder:text-slate-500 ${
-                        selectedManipulation ? themeColors.highlightBorder : ""
                       } ${isSending ? "opacity-50" : ""}`}
                     />
                     <button
                       type="submit"
                       disabled={!message.trim() || isSending}
-                      className={`${themeColors.buttonBg} text-white w-full sm:w-auto px-6 font-bold disabled:opacity-50 ${themeColors.buttonHoverBg} transition`}
+                      className={`${themeColors.buttonBg} text-white w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center font-bold disabled:opacity-50 ${themeColors.buttonHoverBg} transition`}
                     >
                       {isSending ? "..." : "→"}
                     </button>
@@ -1470,7 +1586,7 @@
                   <button
                     onClick={handleEndTurn}
                     disabled={isSending}
-                    className="w-full py-3 bg-slate-700 text-slate-300 font-bold font-mono text-xs tracking-widest hover:bg-slate-600 transition disabled:opacity-50"
+                    className="w-full py-3 bg-slate-700 text-slate-300 font-bold font-mono text-xs tracking-widest hover:bg-slate-600 transition disabled:opacity-50 rounded-lg"
                   >
                     {isSending
                       ? "ПОДОЖДИТЕ..."
@@ -1551,6 +1667,10 @@
             speakers: { alpha: null, beta: null },
             scouts: { alpha: null, beta: null },
             pendingAttack: null,
+            attacks: {
+              alpha: { GUILT: 4, FEAR: 4, AUTHORITY: 4, FLATTERY: 4 },
+              beta: { GUILT: 4, FEAR: 4, AUTHORITY: 4, FLATTERY: 4 },
+            },
           });
         };
 
@@ -1641,19 +1761,19 @@
               <div className="flex gap-2 text-xs">
                 <button
                   onClick={() => setShowRules(true)}
-                  className="bg-slate-700 px-3 py-2 hover:bg-slate-600 transition"
+                  className="bg-slate-700 px-3 py-2 hover:bg-slate-600 transition rounded-lg"
                 >
                   [ RULES ]
                 </button>
                 <button
                   onClick={createGame}
-                  className="bg-blue-600 px-3 py-2 hover:bg-blue-500 transition"
+                  className="bg-blue-600 px-3 py-2 hover:bg-blue-500 transition rounded-lg"
                 >
                   [ NEW SESSION ]
                 </button>
                 <button
                   onClick={onExit}
-                  className="bg-slate-700 px-3 py-2 hover:bg-slate-600 transition"
+                  className="bg-slate-700 px-3 py-2 hover:bg-slate-600 transition rounded-lg"
                 >
                   [ EXIT ]
                 </button>
@@ -1714,7 +1834,7 @@
                             status: "revealed",
                           })
                         }
-                        className="bg-red-600 text-white px-4 py-2 text-xs font-bold tracking-widest hover:bg-red-700 transition"
+                        className="bg-red-600 text-white px-4 py-2 text-xs font-bold tracking-widest hover:bg-red-700 transition rounded-lg"
                       >
                         TERMINATE SESSION
                       </button>
@@ -1730,14 +1850,14 @@
                       return (
                         <div
                           key={team}
-                          className="p-6 bg-slate-800 border-2 border-slate-700"
+                          className="p-6 bg-slate-800 border-2 border-slate-700 rounded-lg"
                         >
                           <h3 className="font-bold uppercase mb-4 text-sm tracking-widest text-white">
                             {team} TEAM [{teamPlayers.length}]
                           </h3>
                           <div className="text-xs mb-2 text-slate-400">
                             ACTIVE_SPEAKER:{" "}
-                            <span className="font-mono bg-slate-700 px-2 py-1 text-slate-200">
+                            <span className="font-mono bg-slate-700 px-2 py-1 text-slate-200 rounded">
                               {currentSpeaker
                                 ? currentSpeaker.slice(-8)
                                 : "N/A"}
@@ -1746,13 +1866,13 @@
 
                           <div className="text-xs mb-2 text-slate-400">
                             ACTIVE_SCOUT:{" "}
-                            <span className="font-mono bg-slate-700 px-2 py-1 text-slate-200">
+                            <span className="font-mono bg-slate-700 px-2 py-1 text-slate-200 rounded">
                               {currentScout ? currentScout.slice(-8) : "N/A"}
                             </span>
                           </div>
                           <div className="text-xs mb-4 text-slate-400">
                             SHIELD_POINTS:{" "}
-                            <span className="font-mono bg-slate-700 px-2 py-1 text-slate-200">
+                            <span className="font-mono bg-slate-700 px-2 py-1 text-slate-200 rounded">
                               {currentShields !== undefined
                                 ? currentShields
                                 : "N/A"}{" "}
@@ -1764,7 +1884,7 @@
                             <div className="text-xs font-bold mb-2 text-slate-300">
                               MEMBERS:
                             </div>
-                            <div className="max-h-32 overflow-y-auto border border-slate-700 p-2 bg-slate-900 text-xs">
+                            <div className="max-h-32 overflow-y-auto border border-slate-700 p-2 bg-slate-900 text-xs rounded">
                               {teamPlayers.length > 0 ? (
                                 teamPlayers.map((pid) => (
                                   <div
@@ -1794,13 +1914,13 @@
                           <div className="grid grid-cols-2 gap-2">
                             <button
                               onClick={() => rerollSpeaker(team)}
-                              className="w-full py-3 bg-slate-700 text-white text-xs font-bold tracking-widest hover:bg-slate-600 transition"
+                              className="w-full py-3 bg-slate-700 text-white text-xs font-bold tracking-widest hover:bg-slate-600 transition rounded-lg"
                             >
                               REROLL SPEAKER
                             </button>
                             <button
                               onClick={() => rerollScout(team)}
-                              className="w-full py-3 bg-slate-700 text-white text-xs font-bold tracking-widest hover:bg-slate-600 transition"
+                              className="w-full py-3 bg-slate-700 text-white text-xs font-bold tracking-widest hover:bg-slate-600 transition rounded-lg"
                             >
                               REROLL SCOUT
                             </button>
@@ -1812,7 +1932,7 @@
                   <h3 className="font-bold uppercase mb-4 text-sm tracking-widest text-white">
                     MANIPULATION LOG
                   </h3>
-                  <div className="bg-slate-800 border-2 border-slate-700 p-4 max-h-96 overflow-y-auto text-xs font-mono">
+                  <div className="bg-slate-800 border-2 border-slate-700 p-4 max-h-96 overflow-y-auto text-xs font-mono rounded-lg">
                     {selectedGameData.manipulationLog?.length === 0 ? (
                       <div className="text-slate-500 text-center py-4">
                         NO DATA
@@ -1829,7 +1949,7 @@
                                 : log.defenseSuccess
                                 ? "border-blue-500 bg-blue-900/30"
                                 : "border-red-500 bg-red-900/30"
-                            }`}
+                            } rounded-r-lg`}
                           >
                             <div className="flex justify-between mb-1 opacity-75">
                               <span>
@@ -1858,7 +1978,7 @@
                   <h3 className="font-bold uppercase mb-4 text-sm tracking-widest mt-8 text-white">
                     CHAT LOG
                   </h3>
-                  <div className="bg-slate-800 border-2 border-slate-700 p-4 max-h-96 overflow-y-auto text-xs font-mono">
+                  <div className="bg-slate-800 border-2 border-slate-700 p-4 max-h-96 overflow-y-auto text-xs font-mono rounded-lg">
                     {selectedGameData.messages?.length === 0 ? (
                       <div className="text-slate-500 text-center py-4">
                         NO MESSAGES
@@ -1873,7 +1993,7 @@
                               isAttack
                                 ? "border-blue-500 bg-blue-900/30"
                                 : "border-slate-700 bg-slate-900/50"
-                            }`}
+                            } rounded-r-lg`}
                           >
                             <div className="flex justify-between mb-2 opacity-75">
                               <span className="font-bold text-slate-300">
@@ -1912,7 +2032,7 @@
                 onClick={() => setShowRules(false)}
               >
                 <div
-                  className="bg-slate-800 max-w-2xl w-full p-8 border border-slate-700 max-h-[90vh] overflow-y-auto"
+                  className="bg-slate-800 max-w-2xl w-full p-8 border border-slate-700 max-h-[90vh] overflow-y-auto rounded-lg"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <h2 className="text-xl font-bold mb-6 text-white tracking-widest">
@@ -1963,7 +2083,7 @@
                   </div>
                   <button
                     onClick={() => setShowRules(false)}
-                    className="mt-8 w-full py-4 bg-white text-slate-900 font-bold tracking-widest hover:bg-slate-200 transition"
+                    className="mt-8 w-full py-4 bg-white text-slate-900 font-bold tracking-widest hover:bg-slate-200 transition rounded-lg"
                   >
                     [ ЗАКРЫТЬ ]
                   </button>
@@ -1983,7 +2103,7 @@
       }) {
         if (!attackType) {
           return (
-            <div className="bg-slate-800 border border-slate-700 p-6">
+            <div className="bg-slate-800 border border-slate-700 p-4 rounded-lg">
               <h4 className="font-bold text-slate-100 mb-2">{title}</h4>
               <p className="text-sm text-slate-400 italic">
                 {isVulnerability
@@ -2004,14 +2124,14 @@
 
         return (
           <div
-            className={`bg-slate-800 border border-slate-700 p-6 border-l-4 ${borderColor}`}
+            className={`bg-slate-800 border border-slate-700 p-4 rounded-lg border-l-4 ${borderColor}`}
           >
             <h4 className="font-bold text-slate-100 mb-4">{title}</h4>
             <div className="mb-4">
               <span className="text-xs text-slate-400">
                 {isDefense ? "Блокировка атаки:" : "Тип:"}{" "}
               </span>
-              <span className="px-3 py-1 bg-slate-700 text-slate-200 text-sm font-bold">
+              <span className="px-3 py-1 bg-slate-700 text-slate-200 text-sm font-bold rounded">
                 {label}
               </span>
             </div>
@@ -2023,7 +2143,7 @@
                   ? "Ваш защитный ответ:"
                   : "Уязвимый ответ оппонента:"}
               </span>
-              <blockquote className="mt-2 p-3 bg-slate-900 border border-slate-700 text-slate-300 italic">
+              <blockquote className="mt-2 p-3 bg-slate-900 border border-slate-700 text-slate-300 italic rounded-md">
                 "{response}"
               </blockquote>
             </div>
@@ -2094,7 +2214,7 @@
           : null;
 
         return (
-          <div className="fixed inset-0 bg-slate-900 text-white p-8 flex flex-col items-center justify-center text-center reveal-animation overflow-y-auto scrollbar-hide">
+          <div className="fixed inset-0 bg-slate-900 text-white p-4 sm:p-8 flex flex-col items-center justify-center text-center reveal-animation overflow-y-auto scrollbar-hide">
             <h1 className="text-4xl sm:text-6xl font-black mb-6 tracking-tighter text-red-500 animate-pulse-slow text-glow-red">
               СИМУЛЯЦИЯ ЗАВЕРШЕНА
             </h1>
@@ -2170,7 +2290,7 @@
 
             <button
               onClick={onExit}
-              className="py-4 px-12 bg-white text-slate-900 font-bold font-mono tracking-widest hover:bg-slate-200 transition animate-pop-in"
+              className="py-4 px-12 bg-white text-slate-900 font-bold font-mono tracking-widest hover:bg-slate-200 transition animate-pop-in rounded-lg"
               style={{ animationDelay: "1.2s" }}
             >
               [ ⏏ ВЫХОД ]
