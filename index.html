@@ -1,0 +1,2316 @@
+<!DOCTYPE html>
+<html lang="ru" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>ТЕСТ 'ПЕРЕГОВОРЩИК'</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script
+      src="https://unpkg.com/react@18/umd/react.development.js"
+      crossorigin
+    ></script>
+    <script
+      src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"
+      crossorigin
+    ></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700;900&display=swap&subset=cyrillic"
+      rel="stylesheet"
+    />
+    <style>
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        font-family: "Inter", sans-serif;
+        -webkit-tap-highlight-color: transparent;
+        background-color: #0f172a; /* bg-slate-900 */
+        position: relative;
+      }
+
+      /* ЭФФЕКТ SCANLINE (ПОЛОСЫ) */
+      body::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        background: repeating-linear-gradient(
+          to bottom,
+          rgba(255, 255, 255, 0.05),
+          rgba(255, 255, 255, 0.05) 1px,
+          transparent 1px,
+          transparent 2px
+        );
+        opacity: 0.6;
+        z-index: 1000;
+      }
+
+      .font-mono {
+        font-family: "Roboto Mono", monospace;
+      }
+
+      .reveal-animation {
+        animation: fadeIn 0.5s ease-in-out;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+
+      @keyframes popIn {
+        0% {
+          opacity: 0;
+          transform: scale(0.9);
+        }
+        100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+      .animate-pop-in {
+        opacity: 0; /* Начинаем невидимым */
+        animation: popIn 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+      }
+
+      /* АНИМАЦИИ ЭФФЕКТОВ */
+      @keyframes flicker {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.7;
+        }
+      }
+      .animate-flicker {
+        animation: flicker 0.2s ease-in-out 3;
+      }
+
+      /* ИЗМЕНЕНИЕ: УБРАНА АНИМАЦИЯ TYPEWRITER, ОСТАЛСЯ ТОЛЬКО КУРСОР */
+      @keyframes blink-caret {
+        from,
+        to {
+          border-color: transparent;
+        }
+        50% {
+          border-color: currentColor;
+        } /* Использует цвет текста */
+      }
+      .typing-caret {
+        border-right: 0.15em solid currentColor; /* Курсор */
+        padding-right: 0.1em;
+        animation: blink-caret 1s step-end infinite;
+      }
+      .typing-caret-done {
+        border-right: none;
+        padding-right: 0;
+      }
+
+      .text-glow {
+        text-shadow: 0 0 8px currentColor;
+      }
+      .text-glow-red {
+        text-shadow: 0 0 12px rgba(239, 68, 68, 0.8); /* red-500 */
+      }
+
+      ::-webkit-scrollbar {
+        width: 4px;
+        height: 4px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 2px;
+      }
+      .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+      }
+      .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+      .pb-safe {
+        padding-bottom: env(safe-area-inset-bottom);
+      }
+      .progress-bar {
+        transition: width 1s linear;
+      }
+    </style>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: "#0f172a",
+              secondary: "#475569",
+              accent: "#2563eb",
+            },
+            animation: {
+              "pulse-slow": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body class="h-full text-slate-200 overflow-hidden">
+    <div id="root" class="h-full"></div>
+
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+      import {
+        getFirestore,
+        doc,
+        setDoc,
+        onSnapshot,
+        updateDoc,
+        getDoc,
+        collection,
+        query,
+        orderBy,
+        deleteDoc,
+        arrayUnion,
+        arrayRemove,
+        writeBatch,
+      } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+      import {
+        getAuth,
+        signInAnonymously,
+        onAuthStateChanged,
+      } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyBokSMgEAnQE_EtgdilYf1DmMC8r0AzAO8",
+        authDomain: "opip2-a90df.firebaseapp.com",
+        projectId: "opip2-a90df",
+        storageBucket: "opip2-a90df.firebasestorage.app",
+        messagingSenderId: "856863305799",
+        appId: "1:856863305799:web:020e2a266d6ed4e8498162",
+      };
+
+      const app = initializeApp(firebaseConfig);
+      window.db = getFirestore(app);
+      window.auth = getAuth(app);
+      window.firebaseModules = {
+        doc,
+        setDoc,
+        onSnapshot,
+        updateDoc,
+        getDoc,
+        signInAnonymously,
+        onAuthStateChanged,
+        collection,
+        query,
+        orderBy,
+        deleteDoc,
+        arrayUnion,
+        arrayRemove,
+        writeBatch,
+      };
+    </script>
+
+    <script type="text/babel" data-type="module">
+      const { useState, useEffect, useRef, useMemo } = React;
+      const {
+        doc,
+        setDoc,
+        onSnapshot,
+        updateDoc,
+        getDoc,
+        signInAnonymously,
+        onAuthStateChanged,
+        collection,
+        query,
+        orderBy,
+        deleteDoc,
+        arrayUnion,
+        arrayRemove,
+        writeBatch,
+      } = window.firebaseModules;
+
+      const ADMIN_CODE = "ADMIN";
+
+      //
+      // =================================================================
+      // ОБНОВЛЕННЫЙ DEFENSE_MARKERS (с "нет" и "не")
+      // =================================================================
+      //
+      const DEFENSE_MARKERS = [
+        "факт",
+        "цифры",
+        "статистика",
+        "данные",
+        "договор",
+        "пункт",
+        "уточните",
+        "обоснуйте",
+        "нет", // <--- ДОБАВЛЕНО
+        "нет, не",
+        "не согласен",
+        "давайте вернемся",
+        "конкретно",
+        "анализ",
+        "проверка",
+        "надо подумать",
+        "взять паузу",
+        "не сейчас",
+        "требует обсуждения",
+        "согласно",
+        "документ",
+        "отчет",
+        "предлагаю",
+        "альтернатива",
+        "рассмотрим",
+        "вопрос",
+        "давайте обсудим",
+        "по порядку",
+        "во-первых",
+        "вернемся к",
+        "детали",
+        "подождите",
+        "не могу",
+        "не готов",
+      ];
+      // =================================================================
+      // КОНЕЦ ИСПРАВЛЕНИЯ
+      // =================================================================
+      //
+
+      const VULNERABILITY_MARKERS = {
+        GUILT: [
+          "извини",
+          "прости",
+          "жаль",
+          "не хотели",
+          "виноват",
+          "сожалею",
+          "неловко",
+          "мы старались",
+          "вы неправильно поняли",
+          "хотели как лучше",
+          "ошибка",
+          "упущение",
+          "недоразумение",
+          "случайно",
+          "исправим",
+          "компенсируем",
+          "недосмотрели",
+        ],
+        FEAR: [
+          "хорошо, давайте",
+          "ладно",
+          "боюсь что",
+          "придется",
+          "вынуждены",
+          "срочно",
+          "только не это",
+          "какой ужас",
+          "наверное вы правы",
+          "поспешим",
+          "конечно, да",
+          "быстрее",
+          "ускорим",
+          "дедлайн",
+          "риски",
+          "последствия",
+          "потеряем",
+          "не успеем",
+        ],
+        AUTHORITY: [
+          "вам виднее",
+          "как скажете",
+          "раз вы так говорите",
+          "мы не знали",
+          "конечно",
+          "согласны",
+          "доверяем вашему опыту",
+          "возможно",
+          "наверное",
+          "экспертиза",
+          "ваш уровень",
+          "раз вы",
+          "безусловно",
+          "вы правы",
+          "не спорю",
+          "полагаемся",
+        ],
+        FLATTERY: [
+          "спасибо",
+          "нам приятно",
+          "стараемся",
+          "приятно слышать",
+          "мы не подведем",
+          "ради вас",
+          "сделаем скидку",
+          "специально для вас",
+          "льстит",
+          "очень",
+          "рады",
+          "засмущали",
+          "лучшие",
+          "профессионалы",
+        ],
+      };
+
+      const ALL_KEYWORDS = [
+        ...DEFENSE_MARKERS,
+        ...Object.values(VULNERABILITY_MARKERS).flat(),
+      ].sort(() => Math.random() - 0.5);
+
+      const MANIPULATION_TYPES = {
+        GUILT: { label: "ВЫЗВАТЬ ИЗВИНЕНИЯ" },
+        FEAR: { label: "ПОТОРОПИТЬ / ДАВИТЬ" },
+        AUTHORITY: { label: "ВЫЗВАТЬ СОГЛАСИЕ" },
+        FLATTERY: { label: "ПОЛУЧИТЬ БЛАГОДАРНОСТЬ" },
+      };
+
+      //
+      // =================================================================
+      // ИСПРАВЛЕННАЯ ФУНКЦИЯ useTypewriter (v2 - JSX)
+      // =================================================================
+      //
+      function useTypewriter(text, speed = 50) {
+        const [visibleIndex, setVisibleIndex] = useState(0);
+        const [isDone, setIsDone] = useState(false);
+
+        const textArray = React.useMemo(
+          () => (text ? text.split("") : []),
+          [text]
+        );
+
+        React.useEffect(() => {
+          if (!text) {
+            setVisibleIndex(0);
+            setIsDone(true);
+            return;
+          }
+
+          setVisibleIndex(0);
+          setIsDone(false);
+          let i = 0;
+
+          if (speed === 0) {
+            setVisibleIndex(text.length);
+            setIsDone(true);
+            return;
+          }
+
+          const timer = setInterval(() => {
+            if (i < text.length) {
+              i++;
+              setVisibleIndex(i);
+            } else {
+              clearInterval(timer);
+              setIsDone(true);
+            }
+          }, speed);
+
+          return () => clearInterval(timer);
+        }, [text, speed]);
+
+        const displayedJsx = React.useMemo(() => {
+          return (
+            <>
+              {textArray.map((char, index) => (
+                <span
+                  key={index}
+                  style={{
+                    visibility: index < visibleIndex ? "visible" : "hidden",
+                  }}
+                >
+                  {char === " " ? "\u00A0" : char}
+                </span>
+              ))}
+            </>
+          );
+        }, [textArray, visibleIndex]);
+
+        return [displayedJsx, isDone];
+      }
+      // =================================================================
+      // КОНЕЦ ИСПРАВЛЕНИЯ
+      // =================================================================
+      //
+
+      function generateSessionId() {
+        return "user_" + Math.random().toString(36).substring(2, 10);
+      }
+
+      //
+      // =================================================================
+      // ОБНОВЛЕННЫЙ App (с логикой `showInitialDictionary`)
+      // =================================================================
+      //
+      function App() {
+        const [gameState, setGameState] = useState("auth");
+        const [userId, setUserId] = useState(null);
+        const [gameId, setGameId] = useState("");
+        const [myTeam, setMyTeam] = useState(null);
+        const [gameData, setGameData] = useState(null);
+        const [error, setError] = useState("");
+        const [showOnboarding, setShowOnboarding] = useState(false);
+        const [showInitialDictionary, setShowInitialDictionary] =
+          useState(false);
+
+        useEffect(() => {
+          const sid = generateSessionId();
+          setUserId(sid);
+          signInAnonymously(window.auth)
+            .then(() => setGameState("lobby"))
+            .catch((e) => setError("Ошибка подключения: " + e.message));
+        }, []);
+
+        useEffect(() => {
+          if (!gameId || !userId || gameState === "admin") return;
+          const gameRef = doc(window.db, "games", gameId);
+          const unsubscribe = onSnapshot(
+            gameRef,
+            (docSnap) => {
+              if (docSnap.exists()) {
+                const data = docSnap.data();
+                setGameData(data);
+                if (data.status === "revealed" && gameState !== "revealed")
+                  setGameState("revealed");
+
+                if (
+                  myTeam &&
+                  data.players?.[myTeam]?.includes(userId) &&
+                  !data.speakers?.[myTeam]
+                ) {
+                  updateDoc(gameRef, {
+                    [`speakers.${myTeam}`]: userId,
+                  }).catch(console.error);
+                }
+              } else {
+                if (["game", "revealed", "team_select"].includes(gameState)) {
+                  setError("Сессия завершена.");
+                  setGameState("lobby");
+                  setGameData(null);
+                  setGameId("");
+                }
+              }
+            },
+            (err) => {
+              console.error("Sync error:", err);
+              setError("Ошибка синхронизации.");
+            }
+          );
+
+          return () => {
+            unsubscribe();
+            if (myTeam && gameId && userId && gameState === "game") {
+              const gameRef = doc(window.db, "games", gameId);
+
+              getDoc(gameRef)
+                .then((snap) => {
+                  if (!snap.exists()) return;
+
+                  const data = snap.data();
+                  const batch = writeBatch(window.db);
+
+                  batch.update(gameRef, {
+                    [`players.${myTeam}`]: arrayRemove(userId),
+                  });
+
+                  if (data.speakers?.[myTeam] === userId) {
+                    batch.update(gameRef, {
+                      [`speakers.${myTeam}`]: null,
+                    });
+                  }
+
+                  if (data.scouts?.[myTeam] === userId) {
+                    batch.update(gameRef, {
+                      [`scouts.${myTeam}`]: null,
+                    });
+                  }
+
+                  return batch.commit();
+                })
+                .catch(console.error);
+            }
+          };
+        }, [gameId, userId, gameState, myTeam]);
+
+        const enterGame = async (team) => {
+          setMyTeam(team);
+          await updateDoc(doc(window.db, "games", gameId), {
+            [`players.${team}`]: arrayUnion(userId),
+          });
+          setShowOnboarding(true);
+          setGameState("game");
+        };
+
+        if (gameState === "auth")
+          return <LoadingScreen message="INITIALIZING..." />;
+        if (gameState === "lobby")
+          return (
+            <Lobby
+              onJoin={async (id) => {
+                if (id === ADMIN_CODE) {
+                  setGameState("admin");
+                  return;
+                }
+                const snap = await getDoc(doc(window.db, "games", id));
+                if (snap.exists()) {
+                  setGameId(id);
+                  setGameState("team_select");
+                } else {
+                  setError("СЕССИЯ НЕ НАЙДЕНА");
+                }
+              }}
+              error={error}
+              setError={setError}
+            />
+          );
+        if (gameState === "admin")
+          return <AdminPanel onExit={() => setGameState("lobby")} />;
+        if (gameState === "team_select")
+          return (
+            <TeamSelect
+              onSelect={enterGame}
+              onBack={() => {
+                setGameId("");
+                setGameState("lobby");
+              }}
+            />
+          );
+        if (gameState === "game" && gameData) {
+          if (showOnboarding)
+            return (
+              <Onboarding
+                onStart={() => {
+                  setShowOnboarding(false);
+                  setShowInitialDictionary(true); // <--- ИЗМЕНЕНО
+                }}
+                team={myTeam}
+              />
+            );
+
+          // НОВЫЙ БЛОК: Показ словаря после онбординга
+          if (showInitialDictionary)
+            return (
+              <DictionaryScreen
+                onClose={() => setShowInitialDictionary(false)}
+                initialDuration={10} // 10 секунд
+              />
+            );
+
+          return (
+            <GameRoom
+              gameId={gameId}
+              myTeam={myTeam}
+              userId={userId}
+              gameData={gameData}
+            />
+          );
+        }
+        if (gameState === "revealed" && gameData)
+          return (
+            <RevealScreen
+              gameData={gameData}
+              myTeam={myTeam}
+              onExit={() => {
+                setGameId("");
+                setGameState("lobby");
+              }}
+            />
+          );
+        return <LoadingScreen message="LOADING..." />;
+      }
+      // =================================================================
+      // КОНЕЦ ИСПРАВЛЕНИЯ App
+      // =================================================================
+      //
+
+      function LoadingScreen({ message }) {
+        return (
+          <div className="flex items-center justify-center h-full bg-slate-900 text-slate-400 font-mono">
+            <div className="flex flex-col items-center animate-pulse">
+              <div className="text-xs tracking-widest">{message}</div>
+            </div>
+          </div>
+        );
+      }
+
+      function Lobby({ onJoin, error, setError }) {
+        const [joinId, setJoinId] = useState("");
+        const [key, setKey] = useState(0);
+        const [typedTitle, isTitleDone] = useTypewriter(
+          "ТЕСТ 'ПЕРЕГОВОРЩИК'",
+          60
+        );
+
+        useEffect(() => {
+          if (error) setKey((k) => k + 1);
+        }, [error]);
+
+        return (
+          <div className="flex flex-col items-center justify-center h-full p-6 bg-slate-900 text-slate-300 reveal-animation">
+            <div className="w-full max-w-md text-center">
+              <h1
+                className={`font-bold text-2xl md:text-3xl text-blue-400 text-glow mb-2 inline-block ${
+                  isTitleDone ? "typing-caret-done" : "typing-caret"
+                }`}
+              >
+                {typedTitle}
+              </h1>
+              <div className="text-xs text-slate-400 mb-8 font-mono">
+                ТЕРМИНАЛ БЕЗОПАСНОГО ДОСТУПА
+              </div>
+
+              <div
+                className="flex items-center justify-center gap-3 mb-4 animate-pop-in font-mono"
+                style={{ animationDelay: "0.5s" }}
+              >
+                <div className="w-2 h-2 bg-green-500 animate-pulse"></div>
+                <div className="text-xs text-green-700">
+                  [✓] STATUS: SECURE_CONNECTION [ESTABLISHED]
+                </div>
+              </div>
+
+              {error && (
+                <div
+                  key={key}
+                  className="text-red-500 p-3 text-xs font-mono mb-4 border border-red-500/50 bg-red-900/20 animate-flicker"
+                >
+                  [X] AUTH_ERROR: {error}
+                </div>
+              )}
+
+              <div
+                className="space-y-3 text-left animate-pop-in font-mono"
+                style={{ animationDelay: "0.7s" }}
+              >
+                <label
+                  htmlFor="sessionId"
+                  className="text-xs font-bold text-slate-300 block"
+                >
+                  > ВВЕДИТЕ КЛЮЧ ДОСТУПА К СЕССИИ:
+                </label>
+                <input
+                  id="sessionId"
+                  type="text"
+                  value={joinId}
+                  onChange={(e) => setJoinId(e.target.value.toUpperCase())}
+                  placeholder="XXXXX"
+                  className="w-full p-4 bg-slate-800 border-2 border-slate-700 text-white font-mono text-xl uppercase tracking-widest focus:border-blue-500 outline-none transition text-center placeholder:text-slate-500"
+                  maxLength={10}
+                  onFocus={() => setError("")}
+                />
+                <button
+                  onClick={() => onJoin(joinId)}
+                  disabled={!joinId}
+                  className="w-full py-4 bg-blue-600 text-white font-bold tracking-widest hover:bg-blue-500 transition disabled:opacity-50"
+                >
+                  [ ПОДКЛЮЧИТЬСЯ → ]
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      //
+      // =================================================================
+      // ОБНОВЛЕННЫЙ DictionaryScreen (динамическое время и заголовок)
+      // =================================================================
+      //
+      function DictionaryScreen({ onClose, initialDuration = 5 }) {
+        const [timeLeft, setTimeLeft] = useState(initialDuration);
+
+        useEffect(() => {
+          if (timeLeft <= 0) {
+            onClose();
+            return;
+          }
+          const timer = setInterval(() => {
+            setTimeLeft((t) => t - 1);
+          }, 1000);
+          return () => clearInterval(timer);
+        }, [timeLeft, onClose]);
+
+        const isScout = initialDuration === 5;
+
+        return (
+          <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm text-white z-50 flex flex-col p-6 reveal-animation">
+            <div className="flex justify-between items-center mb-2 font-mono">
+              <h2 className="text-lg font-bold tracking-widest text-red-500 animate-flicker text-glow-red">
+                {isScout ? "ПЕРЕХВАТ ДАННЫХ" : "БАЗА ЗНАНИЙ"} [ TOP SECRET ]
+              </h2>
+              <div className="text-xl font-bold">{timeLeft}s</div>
+            </div>
+
+            <p className="text-yellow-400 font-mono text-xs mb-4 border border-yellow-500/50 bg-yellow-900/20 p-3">
+              [!] ВНИМАНИЕ: Эти слова — ключ к атаке и защите. Система
+              отслеживает их. Запомните как можно больше.
+            </p>
+
+            <div className="flex-1 overflow-y-auto">
+              <div className="flex flex-wrap gap-2 content-start">
+                {ALL_KEYWORDS.map((word, i) => (
+                  <span
+                    key={i}
+                    className="bg-slate-700 text-slate-300 px-3 py-2 text-sm font-mono lowercase border border-slate-600"
+                  >
+                    <span className="opacity-50 mr-1">></span>
+                    {word}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="h-1 bg-slate-800 mt-6">
+              <div
+                className="h-full bg-red-500 progress-bar"
+                style={{ width: `${(timeLeft / initialDuration) * 100}%` }}
+              ></div>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-full py-4 bg-white text-slate-900 font-bold font-mono tracking-widest hover:bg-slate-200 transition mt-6"
+            >
+              {isScout ? "ЗАКРЫТЬ [ -> ]" : "ПРОПУСТИТЬ [ -> ]"}
+            </button>
+          </div>
+        );
+      }
+      // =================================================================
+      // КОНЕЦ ИСПРАВЛЕНИЯ
+      // =================================================================
+      //
+
+      function TeamSelect({ onSelect, onBack }) {
+        const [typedTitle, isTitleDone] = useTypewriter("ВЫБОР СТОРОНЫ", 60);
+
+        return (
+          <div className="flex flex-col h-full p-6 bg-slate-900 reveal-animation">
+            <button
+              onClick={onBack}
+              className="self-start text-xs font-mono text-slate-400 mb-8 hover:text-slate-200 transition"
+            >
+              [ НАЗАД ]
+            </button>
+            <div className="text-center">
+              <h2
+                className={`text-2xl font-bold mb-2 tracking-tight text-white text-glow inline-block ${
+                  isTitleDone ? "typing-caret-done" : "typing-caret"
+                }`}
+              >
+                {typedTitle}
+              </h2>
+            </div>
+            <p className="text-center text-sm text-slate-400 mb-8 font-mono">
+              Сторона определяет ваши стартовые цели в кейсе.
+            </p>
+            <div className="grid gap-4 max-w-md mx-auto w-full">
+              <TeamCard
+                label="⏵ ALPHA CORP."
+                desc="Покупатель / Атакующая сторона"
+                color="bg-blue-600"
+                hoverBorder="hover:border-blue-500"
+                onClick={() => onSelect("alpha")}
+                delay={100}
+              />
+              <TeamCard
+                label="⏵ BETA INC."
+                desc="Продавец / Удерживающая сторона"
+                color="bg-emerald-600"
+                hoverBorder="hover:border-emerald-500"
+                onClick={() => onSelect("beta")}
+                delay={200}
+              />
+            </div>
+          </div>
+        );
+      }
+
+      function TeamCard({
+        label,
+        desc,
+        color,
+        hoverBorder,
+        onClick,
+        delay = 0,
+      }) {
+        return (
+          <button
+            onClick={onClick}
+            className={`group p-6 text-left transition-all active:scale-[0.98] bg-slate-800 border-2 border-slate-700 ${hoverBorder} hover:bg-slate-700/50 animate-pop-in`}
+            style={{ animationDelay: `${delay}ms` }}
+          >
+            <div
+              className={`text-sm font-bold mb-1 ${color.replace(
+                "bg-",
+                "text-"
+              )}`}
+            >
+              {label}
+            </div>
+            <div className="text-xs font-mono text-slate-400">{desc}</div>
+          </button>
+        );
+      }
+
+      //
+      // =================================================================
+      // ОБНОВЛЕННЫЙ Onboarding (с "Хладнокровием" и "Разведчиком")
+      // =================================================================
+      //
+      function Onboarding({ onStart, team }) {
+        const [view, setView] = useState("briefing"); // 'briefing', 'goals', 'tools'
+        const isAlpha = team === "alpha";
+        const [typedTitle, isTitleDone] = useTypewriter("КЕЙС-ФАЙЛ #T-729", 60);
+
+        const theme = isAlpha
+          ? {
+              accent: "text-blue-400",
+              accentHover: "hover:text-blue-300",
+              bg: "bg-blue-600",
+              border: "border-blue-500",
+              hoverBorder: "hover:border-blue-500",
+              glow: "text-blue-400 text-glow",
+            }
+          : {
+              accent: "text-emerald-400",
+              accentHover: "hover:text-emerald-300",
+              bg: "bg-emerald-600",
+              border: "border-emerald-500",
+              hoverBorder: "hover:border-emerald-500",
+              glow: "text-emerald-400 text-glow",
+            };
+
+        const TABS = [
+          { id: "briefing", label: "БРИФИНГ" },
+          { id: "goals", label: "ЦЕЛИ" },
+          { id: "tools", label: "ИНСТРУМЕНТЫ" },
+        ];
+
+        const BriefingContent = () => (
+          <>
+            <h3 className="text-lg font-bold text-white mb-4">Обзор Кейса</h3>
+            <div className="space-y-4 text-sm text-slate-300">
+              <p>
+                Корпорация "Alpha" (покупатель) инициировала враждебное
+                поглощение "Beta Inc." (продавец). Переговоры зашли в тупик.
+              </p>
+              <p>
+                Вам предстоит принять участие в финальном раунде в качестве
+                ключевого переговорщика от вашей стороны.
+              </p>
+              <p>
+                Симуляция "ТЕСТ 'ПЕРЕГОВОРЩИК'" активирована. Система будет
+                анализировать каждое ваше слово и тактический ход для оценки
+                эффективности.
+              </p>
+              <p className="font-bold text-slate-100">
+                {isAlpha
+                  ? 'Ваша задача — "дожать" Beta Inc. и закрыть сделку на ваших условиях.'
+                  : "Ваша задача — отстоять позицию Beta Inc. и не допустить невыгодной сделки."}
+              </p>
+            </div>
+          </>
+        );
+
+        const GoalsContent = () => {
+          const goals = isAlpha
+            ? [
+                "ЦЕНА: Добиться снижения финальной стоимости с $500М до $420М (-15%).",
+                "КОНТРОЛЬ: Получить полный операционный контроль над R&D отделом Beta Inc.",
+                "СРОКИ: Закрыть сделку в рамках этой сессии.",
+              ]
+            : [
+                "ЦЕНА: Отстоять оценку в $500М. Не поддаваться на давление.",
+                "КОНТРОЛЬ: Гарантировать 2 места для основателей Beta в новом совете директоров.",
+                "АВТОНОМИЯ: Сохранить R&D отдел как независимую структуру.",
+              ];
+          return (
+            <>
+              <h3 className="text-lg font-bold text-white mb-4">
+                Задачи: {team.toUpperCase()}
+              </h3>
+              <ul className="space-y-3">
+                {goals.map((goal, i) => (
+                  <li
+                    key={i}
+                    className="flex gap-4 p-4 bg-slate-800 border border-slate-700"
+                  >
+                    <span className={`font-mono ${theme.accent}`}>
+                      0{i + 1}.
+                    </span>
+                    <span className="text-sm text-slate-200">{goal}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          );
+        };
+
+        //
+        // ОБНОВЛЕННЫЙ ToolsContent
+        //
+        const ToolsContent = () => (
+          <>
+            <h3 className="text-lg font-bold text-white mb-4">
+              Инструменты и Протоколы
+            </h3>
+
+            {/* Секция 1: Тактические маркеры (без изменений) */}
+            <div className="mb-6">
+              <h4 className="font-bold text-slate-100 mb-2">
+                Тактические маркеры:
+              </h4>
+              <div className="text-sm space-y-3 text-slate-300 bg-slate-800 p-4 border border-slate-700">
+                <p>
+                  Под полем ввода вы видите 4 тактики. Это не "волшебные
+                  кнопки", а <strong>маркеры для системы</strong>.
+                </p>
+                <ol className="list-decimal list-inside space-y-2 pl-2">
+                  <li>
+                    Вы пишете сообщение, цель которого —{" "}
+                    <strong>вызвать у оппонента нужную реакцию</strong>.
+                  </li>
+                  <li>
+                    <strong>Перед отправкой</strong> вы нажимаете
+                    соответствующую кнопку (напр., `ВЫЗВАТЬ ИЗВИНЕНИЯ`).
+                  </li>
+                  <li>
+                    Система проанализирует, *действительно* ли оппонент
+                    использовал уязвимые слова в своем *ответе*.
+                  </li>
+                </ol>
+                <p
+                  className={`font-mono text-xs ${theme.accent} p-3 bg-slate-900 border border-slate-700`}
+                >
+                  <strong>ВАЖНО:</strong> Система фиксирует только явные
+                  вербальные уязвимости. Если оппонент не поддался на уловку или
+                  ответил нейтрально, ваша попытка не будет засчитана.
+                </p>
+              </div>
+            </div>
+
+            {/* НОВАЯ СЕКЦИЯ: МЕХАНИКА "ЩИТА"
+             */}
+            <div className="mb-6">
+              <h4 className="font-bold text-slate-100 mb-2">
+                Ресурс: Хладнокровие
+              </h4>
+              <div className="text-sm space-y-3 text-slate-300 bg-slate-800 p-4 border border-slate-700">
+                <p>
+                  Система анализирует ваш уровень **ХЛАДНОКРОВИЯ** — ресурс,
+                  показывающий вашу способность твердо держать позицию.
+                </p>
+                <ul className="list-disc list-inside space-y-2 pl-2">
+                  <li>
+                    Апеллирование к весомым аргументам (ссылки на *факты*,
+                    *договоры*, *анализ*) требует высокой концентрации и
+                    **тратит** ваш запас ХЛАДНОКРОВИЯ.
+                  </li>
+                  <li>
+                    Когда ХЛАДНОКРОВИЕ **иссякнет (0)**, ваша позиция станет
+                    уязвимой. Ваши аргументы временно **перестанут**
+                    восприниматься системой как весомые.
+                  </li>
+                  <li>
+                    Запас восстанавливается, если вы ведете ход,{" "}
+                    <strong>не прибегая</strong> к этим маркерам (т.е. отвечаете
+                    "нейтрально").
+                  </li>
+                </ul>
+                <p
+                  className={`font-mono text-xs ${theme.accent} p-3 bg-slate-900 border border-slate-700`}
+                >
+                  <strong>ВАЖНО:</strong> Вы видите только свой запас.
+                  Контролируйте этот ресурс, чтобы не "перегореть" в
+                  ответственный момент.
+                </p>
+              </div>
+            </div>
+            {/* ====================================================== */}
+
+            {/* ОБНОВЛЕННАЯ СЕКЦИЯ: РОЛИ
+             */}
+            <div>
+              <h4 className="font-bold text-slate-100 mb-2">
+                Протокол связи и Роли:
+              </h4>
+              <ul className="space-y-3 text-sm text-slate-300">
+                <li className="flex gap-3 p-3 bg-slate-800 border border-slate-700">
+                  <span className={`font-mono ${theme.accent}`}>01.</span>
+                  <span>
+                    <strong>РЕЖИM РАЦИИ:</strong> Строгая очередность. Завершил
+                    мысль — передай канал.
+                  </span>
+                </li>
+                <li className="flex gap-3 p-3 bg-slate-800 border border-slate-700">
+                  <span className={`font-mono ${theme.accent}`}>02.</span>
+                  <span>
+                    <strong>СПИКЕР (Единый голос):</strong> В эфире только один
+                    Спикер от группы. Он принимает решения и ведет диалог.
+                  </span>
+                </li>
+                <li className="flex gap-3 p-3 bg-slate-800 border border-slate-700">
+                  <span className={`font-mono ${theme.accent}`}>03.</span>
+                  <span>
+                    <strong>РАЗВЕДЧИК (Анализ данных):</strong> Периодически
+                    одному из Наблюдателей (кроме Спикера) будет открываться
+                    **краткий доступ к 'Базе Знаний'**. Его задача — быстро
+                    проанализировать данные и помочь Спикеру. Роль передается.
+                  </span>
+                </li>
+              </ul>
+            </div>
+            {/* ====================================================== */}
+          </>
+        );
+        // КОНЕЦ ОБНОВЛЕНИЯ ToolsContent
+
+        return (
+          <div className="fixed inset-0 bg-slate-900 text-slate-200 z-50 flex items-center justify-center p-6 reveal-animation">
+            <div className="max-w-3xl w-full bg-slate-800/80 backdrop-blur-sm border border-slate-700 shadow-2xl max-h-[90vh] flex flex-col">
+              <div className={`p-6 border-b ${theme.border}`}>
+                <div className="flex justify-between items-center mb-2">
+                  <h2
+                    className={`text-2xl font-bold text-white tracking-tighter ${
+                      theme.glow
+                    } inline-block ${
+                      isTitleDone ? "typing-caret-done" : "typing-caret"
+                    }`}
+                  >
+                    {typedTitle}
+                  </h2>
+                  <span
+                    className={`px-3 py-1 ${theme.bg} text-white text-xs font-mono font-bold tracking-widest`}
+                  >
+                    СТОРОНА: {team.toUpperCase()}
+                  </span>
+                </div>
+                <div className={`text-xs ${theme.accent} font-mono`}>
+                  ЛОКАЦИЯ: Женева, Швейцария // СТАТУС: АКТИВНЫЙ
+                </div>
+              </div>
+
+              <div className="flex border-b border-slate-700">
+                {TABS.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setView(tab.id)}
+                    className={`flex-1 p-4 text-xs font-bold font-mono tracking-widest transition ${
+                      view === tab.id
+                        ? `${theme.bg} text-white`
+                        : "text-slate-400 hover:bg-slate-700/50 hover:text-slate-200"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="p-6 overflow-y-auto scrollbar-hide">
+                {view === "briefing" && <BriefingContent />}
+                {view === "goals" && <GoalsContent />}
+                {view === "tools" && <ToolsContent />}
+              </div>
+
+              <div className="p-6 border-t border-slate-700 bg-slate-900/50 mt-auto">
+                <button
+                  onClick={onStart}
+                  className="w-full py-4 bg-white text-slate-900 font-bold font-mono tracking-widest hover:bg-slate-200 transition"
+                >
+                  [ ПРИНЯТЬ БРИФИНГ ⏵ ]
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+      // =================================================================
+      // КОНЕЦ ИСПРАВЛЕНИЯ Onboarding
+      // =================================================================
+      //
+
+      function ChatMessage({ text, team, isMe, isOpponent, themeColors }) {
+        const [typedText, isDone] = useTypewriter(text, isOpponent ? 20 : 0);
+
+        return (
+          <div
+            className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}
+          >
+            <div className="text-[10px] font-mono text-slate-400 mb-1 uppercase">
+              {team}
+            </div>
+            <div
+              className={`max-w-[85%] p-4 text-sm break-words ${
+                isMe
+                  ? `bg-slate-700 border-r-4 ${themeColors.border} text-white`
+                  : "bg-slate-600/50 border-l-4 border-slate-500 text-slate-200"
+              }`}
+            >
+              <span
+                className={
+                  isOpponent && !isDone ? "typing-caret" : "typing-caret-done"
+                }
+              >
+                {typedText}
+              </span>
+            </div>
+          </div>
+        );
+      }
+
+      //
+      // =================================================================
+      // ОБНОВЛЕННЫЙ GameRoom (Щит, Разведчик, Ротация)
+      // =================================================================
+      //
+      function GameRoom({ gameId, myTeam, userId, gameData }) {
+        const [message, setMessage] = useState("");
+        const [selectedManipulation, setSelectedManipulation] = useState(null);
+        const [isMyScoutTurn, setIsMyScoutTurn] = useState(false);
+        const [isSending, setIsSending] = useState(false); // <--- НОВОЕ: БЛОКИРОВКА ОТПРАВКИ
+        const chatRef = useRef();
+
+        const isMyTurn = gameData.turn === myTeam;
+        const isMySpeaker = gameData.speakers?.[myTeam] === userId;
+        const myScoutId = gameData.scouts?.[myTeam];
+        const canAct = isMyTurn && isMySpeaker;
+
+        const [hasAttackedThisTurn, setHasAttackedThisTurn] = useState(false);
+
+        const themeColors = useMemo(() => {
+          return myTeam === "alpha"
+            ? {
+                border: "border-blue-500",
+                focusBorder: "focus:border-blue-500",
+                highlightBorder: "border-blue-500",
+                buttonBg: "bg-blue-600",
+                buttonHoverBg: "hover:bg-blue-500",
+                buttonText: "text-white",
+                buttonBorder: "border-blue-600",
+                glow: "text-blue-400 text-glow",
+                shieldBg: "bg-blue-500",
+              }
+            : {
+                border: "border-emerald-500",
+                focusBorder: "focus:border-emerald-500",
+                highlightBorder: "border-emerald-500",
+                buttonBg: "bg-emerald-600",
+                buttonHoverBg: "hover:bg-emerald-500",
+                buttonText: "text-white",
+                buttonBorder: "border-emerald-600",
+                glow: "text-emerald-400 text-glow",
+                shieldBg: "bg-emerald-500",
+              };
+        }, [myTeam]);
+
+        useEffect(
+          () => chatRef.current?.scrollTo(0, chatRef.current.scrollHeight),
+          [gameData.messages]
+        );
+
+        useEffect(() => {
+          if (isMyTurn) {
+            setHasAttackedThisTurn(false);
+          }
+        }, [isMyTurn]);
+
+        //
+        // ЭФФЕКТ: Показ словаря для Разведчика
+        //
+        useEffect(() => {
+          if (isMyTurn && userId === myScoutId && !isMySpeaker) {
+            setIsMyScoutTurn(true);
+          }
+        }, [isMyTurn, userId, myScoutId, isMySpeaker]);
+
+        //
+        // ИСПРАВЛЕННЫЙ handleSend
+        //
+        const handleSend = async (e) => {
+          e.preventDefault();
+          if (!message.trim() || !canAct || isSending) return;
+
+          setIsSending(true);
+          const text = message.trim();
+          setMessage("");
+
+          const updates = {
+            messages: arrayUnion({
+              text,
+              team: myTeam,
+              senderId: userId,
+              timestamp: Date.now(),
+              manipulationAttempt: selectedManipulation,
+            }),
+          };
+
+          const lower = text.toLowerCase();
+          const currentShields =
+            gameData.shields?.[myTeam] !== undefined
+              ? gameData.shields[myTeam]
+              : 3;
+
+          const words = lower.replace(/[.,!?]/g, "").split(/\s+/);
+
+          const hasDefense = DEFENSE_MARKERS.some((m) => {
+            if (m.length <= 3) {
+              return words.includes(m);
+            } else {
+              return lower.includes(m);
+            }
+          });
+
+          const myCurrentScore = gameData.scores?.[myTeam] || 0;
+
+          // ======================================================
+          // ИСПРАВЛЕНИЕ: Логика Щита (Только Трата)
+          // ======================================================
+          if (hasDefense) {
+            if (currentShields > 0) {
+              updates[`shields.${myTeam}`] = currentShields - 1;
+            }
+            // Взводим флаг, что защита была использована
+            updates.currentTurnUsedDefense = true;
+          }
+          // БЛОК "ELSE" (ВОССТАНОВЛЕНИЕ) УДАЛЕН ОТСЮДА
+          // ======================================================
+
+          // Проверяем, отвечаю ли я на атаку
+          if (
+            gameData.pendingAttack &&
+            gameData.pendingAttack.team !== myTeam
+          ) {
+            let isSuccess = false; // Успех атакующего
+            let defenseBlocked = false;
+
+            const attackerTeam = gameData.pendingAttack.team;
+            const attackerCurrentScore = gameData.scores?.[attackerTeam] || 0;
+
+            if (hasDefense) {
+              if (currentShields > 0) {
+                // Щит активен, защита работает
+                defenseBlocked = true;
+                isSuccess = false;
+                updates[`scores.${myTeam}`] = myCurrentScore + 1; // Очки за защиту
+              } else {
+                defenseBlocked = false;
+              }
+            } else {
+              defenseBlocked = false;
+            }
+
+            // Анализируем на уязвимость, ТОЛЬКО если защита не сработала
+            if (!defenseBlocked) {
+              if (
+                VULNERABILITY_MARKERS[gameData.pendingAttack.type]?.some((m) =>
+                  lower.includes(m)
+                )
+              ) {
+                isSuccess = true;
+                updates[`scores.${attackerTeam}`] = attackerCurrentScore + 1;
+              }
+            }
+
+            updates.manipulationLog = arrayUnion({
+              attacker: gameData.pendingAttack.team,
+              victim: myTeam,
+              type: gameData.pendingAttack.type,
+              success: isSuccess,
+              defenseSuccess: defenseBlocked,
+              response: text.substring(0, 80),
+            });
+            updates.pendingAttack = null;
+          }
+
+          if (selectedManipulation)
+            updates.pendingAttack = {
+              team: myTeam,
+              type: selectedManipulation,
+            };
+
+          try {
+            await updateDoc(doc(window.db, "games", gameId), updates);
+          } catch (err) {
+            console.error("Update failed:", err);
+          } finally {
+            setIsSending(false);
+            if (selectedManipulation) {
+              setHasAttackedThisTurn(true);
+            }
+            setSelectedManipulation(null);
+          }
+        };
+
+        //
+        // ИСПРАВЛЕННАЯ ФУНКЦИЯ: handleEndTurn (с блокировкой)
+        //
+        const handleEndTurn = async () => {
+          if (isSending) return;
+          setIsSending(true);
+
+          const updates = {
+            turn: myTeam === "alpha" ? "beta" : "alpha",
+            turnCount: (gameData.turnCount || 0) + 1,
+            currentTurnUsedDefense: false, // <--- СБРОС ФЛАГА для следующего игрока
+          };
+
+          // ======================================================
+          // ИСПРАВЛЕНИЕ: Логика Восстановления Щита
+          // ======================================================
+          const didUseDefense = gameData.currentTurnUsedDefense;
+          if (!didUseDefense) {
+            // Если флаг НЕ был взведен, значит, восстанавливаем 1 ОХ
+            const currentShields =
+              gameData.shields?.[myTeam] !== undefined
+                ? gameData.shields[myTeam]
+                : 3;
+            updates[`shields.${myTeam}`] = Math.min(3, currentShields + 1);
+          }
+          // ======================================================
+
+          const nextTurnNumber = updates.turnCount;
+          const opponentTeam = myTeam === "alpha" ? "beta" : "alpha";
+          const opponentSpeaker = gameData.speakers?.[opponentTeam];
+          const opponentPlayers = gameData.players?.[opponentTeam] || [];
+          const opponentScout = gameData.scouts?.[opponentTeam];
+
+          // Ротация разведчика ОППОНЕНТА
+          if (nextTurnNumber === 1 || nextTurnNumber % 2 === 0) {
+            const observers = opponentPlayers.filter(
+              (p) => p !== opponentSpeaker
+            );
+
+            if (observers.length > 0) {
+              let potentialScouts = observers;
+              if (observers.length > 1 && opponentScout) {
+                potentialScouts = observers.filter((p) => p !== opponentScout);
+              }
+              const newScout =
+                potentialScouts[
+                  Math.floor(Math.random() * potentialScouts.length)
+                ];
+              if (newScout) {
+                updates[`scouts.${opponentTeam}`] = newScout;
+              }
+            }
+          }
+
+          try {
+            await updateDoc(doc(window.db, "games", gameId), updates);
+          } catch (err) {
+            console.error("End turn failed:", err);
+          } finally {
+            setIsSending(false);
+          }
+        };
+
+        return (
+          <div className="flex flex-col h-full bg-slate-800 max-w-3xl mx-auto shadow-xl reveal-animation">
+            {/* ... (Блок заголовка не меняется) ... */}
+            <div className="p-4 bg-slate-900 text-slate-400 flex justify-between items-center text-xs font-mono">
+              <div className="flex items-center gap-2">
+                <div className="text-white font-bold tracking-widest">
+                  {gameId}
+                </div>
+                <div className="opacity-50">
+                  [{userId.slice(-5).toUpperCase()}]
+                </div>
+                <div className="ml-4">
+                  STATUS:{" "}
+                  {isMyTurn
+                    ? isMySpeaker
+                      ? "ACTIVE_SPEAKER"
+                      : userId === myScoutId
+                      ? "ACTIVE_SCOUT"
+                      : "OBSERVER"
+                    : "STANDBY"}
+                </div>
+              </div>
+              <div
+                className={`w-2 h-2 ${
+                  isMyTurn ? "bg-green-500 animate-pulse" : "bg-red-500"
+                }`}
+              ></div>
+            </div>
+
+            {/* ... (Блок чата не меняется) ... */}
+            <div
+              className="flex-1 overflow-y-auto p-4 space-y-6 bg-slate-800"
+              ref={chatRef}
+            >
+              {gameData.messages.map((msg, i) => {
+                const isMe = msg.team === myTeam;
+                return (
+                  <ChatMessage
+                    key={msg.timestamp || i}
+                    text={msg.text}
+                    team={msg.team}
+                    isMe={isMe}
+                    isOpponent={!isMe}
+                    themeColors={themeColors}
+                  />
+                );
+              })}
+            </div>
+
+            {/*
+              ======================================================
+              ОБНОВЛЕННЫЙ БЛОК УПРАВЛЕНИЯ (с `disabled={isSending}`)
+              ======================================================
+            */}
+            <div className="bg-slate-900 border-t border-slate-700 p-4 pb-safe">
+              {!isMyTurn ? (
+                <div className="text-center text-slate-500 py-4 font-mono text-xs tracking-widest border-2 border-dashed border-slate-700">
+                  <div className="flex items-center justify-center gap-3 mb-2">
+                    <div className="w-2 h-2 bg-red-500 animate-pulse"></div>
+                    <span className="text-red-500">[X] КАНАЛ ЗАКРЫТ</span>
+                  </div>
+                  <div className="text-sm text-slate-400">
+                    ОЖИДАНИЕ ОППОНЕНТА...
+                  </div>
+                </div>
+              ) : !isMySpeaker ? (
+                <div className="text-center text-slate-500 py-4 font-mono text-xs tracking-widest border-2 border-dashed border-slate-700">
+                  <div className="flex items-center justify-center gap-3 mb-2">
+                    <div className="w-2 h-2 bg-yellow-500 animate-pulse"></div>
+                    <span className="text-yellow-500">[!] СПИКЕР НА ЛИНИИ</span>
+                  </div>
+                  <div className="text-sm text-slate-400">
+                    {userId === myScoutId && !isMyScoutTurn
+                      ? "ОЖИДАНИЕ ДАННЫХ..."
+                      : "ОЖИДАНИЕ ДЕЙСТВИЙ..."}
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* ... (Блок "Щита" не меняется) ... */}
+                  <div className="px-0 pb-4">
+                    <div className="text-xs font-mono uppercase text-slate-400 mb-2">
+                      СТАТУС ХЛАДНОКРОВИЯ:
+                    </div>
+                    <div className="flex gap-2">
+                      {[...Array(3)].map((_, i) => (
+                        <div
+                          key={i}
+                          className={`h-2 flex-1 transition-all ${
+                            i <
+                            (gameData.shields?.[myTeam] !== undefined
+                              ? gameData.shields[myTeam]
+                              : 3)
+                              ? themeColors.shieldBg
+                              : "bg-slate-700"
+                          }`}
+                        ></div>
+                      ))}
+                    </div>
+                    {(gameData.shields?.[myTeam] || 0) === 0 && (
+                      <div className="text-red-500 text-xs font-mono mt-2 animate-pulse">
+                        [!] ВНИМАНИЕ: ЗАЩИТА ПРОБИТА. МАРКЕРЫ НЕЭФФЕКТИВНЫ.
+                      </div>
+                    )}
+                  </div>
+                  {/* ================================== */}
+
+                  <div className="flex flex-wrap gap-2 pb-4">
+                    {Object.entries(MANIPULATION_TYPES).map(([key, data]) => (
+                      <button
+                        key={key}
+                        onClick={() =>
+                          setSelectedManipulation(
+                            selectedManipulation === key ? null : key
+                          )
+                        }
+                        // ДОБАВЛЕНА БЛОКИРОВКА
+                        disabled={hasAttackedThisTurn || isSending}
+                        className={`px-3 py-2 text-xs font-bold font-mono tracking-widest transition-all border-2 whitespace-nowrap ${
+                          selectedManipulation === key
+                            ? `${themeColors.buttonBg} ${themeColors.buttonText} ${themeColors.buttonBorder}`
+                            : "bg-slate-800 text-slate-300 border-slate-700"
+                        } ${
+                          hasAttackedThisTurn || isSending // ОБНОВЛЕНО
+                            ? "opacity-30 cursor-not-allowed"
+                            : "hover:border-slate-500"
+                        }`}
+                      >
+                        {data.label}
+                      </button>
+                    ))}
+                  </div>
+                  <form onSubmit={handleSend} className="flex gap-2 mb-2">
+                    <input
+                      type="text"
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      placeholder={
+                        isSending ? "ОТПРАВКА..." : "> Введите сообщение..."
+                      }
+                      // ДОБАВЛЕНА БЛОКИРОВКА
+                      disabled={isSending}
+                      className={`flex-1 bg-slate-700 border-2 border-slate-600 p-3 font-mono text-sm text-white ${
+                        themeColors.focusBorder
+                      } outline-none transition placeholder:text-slate-500 ${
+                        selectedManipulation ? themeColors.highlightBorder : ""
+                      } ${isSending ? "opacity-50" : ""}`}
+                    />
+                    <button
+                      type="submit"
+                      // ДОБАВЛЕНА БЛОКИРОВКА
+                      disabled={!message.trim() || isSending}
+                      className={`${themeColors.buttonBg} text-white px-6 font-bold disabled:opacity-50 ${themeColors.buttonHoverBg} transition`}
+                    >
+                      {isSending ? "..." : "→"}
+                    </button>
+                  </form>
+                  <button
+                    onClick={handleEndTurn}
+                    // ДОБАВЛЕНА БЛОКИРОВКА
+                    disabled={isSending}
+                    className="w-full py-3 bg-slate-700 text-slate-300 font-bold font-mono text-xs tracking-widest hover:bg-slate-600 transition disabled:opacity-50"
+                  >
+                    {isSending
+                      ? "ПОДОЖДИТЕ..."
+                      : "ПЕРЕДАТЬ КАНАЛ [ КОНЕЦ СВЯЗИ ]"}
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Показ словаря для Разведчика (5 сек) */}
+            {isMyScoutTurn && (
+              <DictionaryScreen
+                onClose={() => setIsMyScoutTurn(false)}
+                initialDuration={5}
+              />
+            )}
+          </div>
+        );
+      }
+      // =================================================================
+      // КОНЕЦ ИСПРАВЛЕНИЯ GameRoom
+      // =================================================================
+      //
+
+      //
+      // =================================================================
+      // ОБНОВЛЕННЫЙ AdminPanel (Щит, Разведчик, Ротация)
+      // =================================================================
+      //
+      function AdminPanel({ onExit }) {
+        const [games, setGames] = useState([]);
+        const [selectedGameId, setSelectedGameId] = useState(null);
+        const [selectedGameData, setSelectedGameData] = useState(null);
+        const [showRules, setShowRules] = useState(false);
+
+        useEffect(
+          () =>
+            onSnapshot(
+              query(
+                collection(window.db, "games"),
+                orderBy("createdAt", "desc")
+              ),
+              (sn) => setGames(sn.docs.map((d) => ({ id: d.id, ...d.data() })))
+            ),
+          []
+        );
+
+        useEffect(() => {
+          if (!selectedGameId) {
+            setSelectedGameData(null);
+            return;
+          }
+          return onSnapshot(
+            doc(window.db, "games", selectedGameId),
+            (docSnap) => {
+              if (docSnap.exists())
+                setSelectedGameData({ id: docSnap.id, ...docSnap.data() });
+            }
+          );
+        }, [selectedGameId]);
+
+        const deleteGame = async (id) => {
+          if (
+            window.confirm(
+              `Вы уверены, что хотите удалить сессию ${id}? Это действие необратимо.`
+            )
+          ) {
+            if (selectedGameId === id) {
+              setSelectedGameId(null);
+            }
+            await deleteDoc(doc(window.db, "games", id));
+          }
+        };
+
+        const createGame = async () => {
+          const id = Math.random().toString(36).substring(2, 7).toUpperCase();
+          await setDoc(doc(window.db, "games", id), {
+            createdAt: Date.now(),
+            status: "active",
+            turn: "alpha",
+            turnCount: 0, // <--- НОВОЕ
+            messages: [],
+            scores: { alpha: 0, beta: 0 },
+            shields: { alpha: 3, beta: 3 }, // <--- НОВОЕ
+            currentTurnUsedDefense: false,
+            manipulationLog: [],
+            players: { alpha: [], beta: [] },
+            speakers: { alpha: null, beta: null },
+            scouts: { alpha: null, beta: null }, // <--- НОВОЕ
+            pendingAttack: null,
+          });
+        };
+
+        const rerollSpeaker = async (team) => {
+          const playersList = selectedGameData?.players?.[team] || [];
+          if (playersList.length === 0)
+            return alert("NO PLAYERS IN TEAM " + team.toUpperCase());
+
+          const currentSpeaker = selectedGameData.speakers?.[team];
+          const currentScout = selectedGameData.scouts?.[team];
+
+          let availableCandidates = playersList;
+
+          if (playersList.length > 1 && currentSpeaker) {
+            availableCandidates = playersList.filter(
+              (p) => p !== currentSpeaker
+            );
+          }
+
+          if (availableCandidates.length > 1 && currentScout) {
+            availableCandidates = availableCandidates.filter(
+              (p) => p !== currentScout
+            );
+          }
+
+          if (availableCandidates.length === 0 && playersList.length > 1) {
+            availableCandidates = playersList.filter(
+              (p) => p !== currentSpeaker
+            );
+          }
+
+          if (availableCandidates.length === 0) {
+            availableCandidates = playersList; // Fallback
+          }
+
+          const nextSpeaker =
+            availableCandidates[
+              Math.floor(Math.random() * availableCandidates.length)
+            ];
+
+          if (nextSpeaker) {
+            await updateDoc(doc(window.db, "games", selectedGameId), {
+              [`speakers.${team}`]: nextSpeaker,
+            });
+          }
+        };
+
+        //
+        // НОВАЯ ФУНКЦИЯ: rerollScout
+        //
+        const rerollScout = async (team) => {
+          const playersList = selectedGameData?.players?.[team] || [];
+          if (playersList.length === 0)
+            return alert("NO PLAYERS IN TEAM " + team.toUpperCase());
+
+          const currentSpeaker = selectedGameData.speakers?.[team];
+          const currentScout = selectedGameData.scouts?.[team];
+
+          let availableCandidates = playersList.filter(
+            (p) => p !== currentSpeaker
+          );
+
+          if (availableCandidates.length > 1 && currentScout) {
+            availableCandidates = availableCandidates.filter(
+              (p) => p !== currentScout
+            );
+          }
+
+          if (availableCandidates.length === 0) {
+            return alert("NOT ENOUGH OBSERVERS TO REROLL SCOUT");
+          }
+
+          const nextScout =
+            availableCandidates[
+              Math.floor(Math.random() * availableCandidates.length)
+            ];
+
+          if (nextScout) {
+            await updateDoc(doc(window.db, "games", selectedGameId), {
+              [`scouts.${team}`]: nextScout,
+            });
+          }
+        };
+
+        return (
+          <div className="h-full flex flex-col bg-slate-900 text-slate-200 font-mono">
+            <div className="bg-slate-900 text-white p-4 flex justify-between items-center border-b border-slate-700">
+              <h1 className="font-bold tracking-widest text-glow">
+                ADMIN_TERMINAL
+              </h1>
+              <div className="flex gap-2 text-xs">
+                <button
+                  onClick={() => setShowRules(true)}
+                  className="bg-slate-700 px-3 py-2 hover:bg-slate-600 transition"
+                >
+                  [ RULES ]
+                </button>
+                <button
+                  onClick={createGame}
+                  className="bg-blue-600 px-3 py-2 hover:bg-blue-500 transition"
+                >
+                  [ NEW SESSION ]
+                </button>
+                <button
+                  onClick={onExit}
+                  className="bg-slate-700 px-3 py-2 hover:bg-slate-600 transition"
+                >
+                  [ EXIT ]
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+              <div className="w-full md:w-64 bg-slate-800 border-b md:border-b-0 md:border-r border-slate-700 h-48 md:h-full overflow-y-auto">
+                {games.map((g) => (
+                  <div
+                    key={g.id}
+                    onClick={() => setSelectedGameId(g.id)}
+                    className={`flex justify-between items-center p-4 border-b border-slate-700 cursor-pointer hover:bg-slate-700/50 transition ${
+                      selectedGameId === g.id ? "bg-slate-700/50" : ""
+                    }`}
+                  >
+                    <div>
+                      <div
+                        className={`text-sm ${
+                          selectedGameId === g.id
+                            ? "text-white font-bold"
+                            : "text-slate-300"
+                        }`}
+                      >
+                        {g.id}
+                      </div>
+                      <div
+                        className={`text-xs ${
+                          g.status === "active"
+                            ? "text-green-500"
+                            : "text-slate-500"
+                        }`}
+                      >
+                        {g.status}
+                      </div>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteGame(g.id);
+                      }}
+                      className="text-red-500 hover:text-red-400 text-xs font-bold"
+                    >
+                      [X]
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {selectedGameData ? (
+                <div className="flex-1 p-6 overflow-y-auto bg-slate-900">
+                  <div className="flex justify-between items-center mb-8">
+                    <h2 className="text-2xl font-bold tracking-tight text-white">
+                      {selectedGameData.id}
+                    </h2>
+                    {selectedGameData.status === "active" && (
+                      <button
+                        onClick={() =>
+                          updateDoc(doc(window.db, "games", selectedGameId), {
+                            status: "revealed",
+                          })
+                        }
+                        className="bg-red-600 text-white px-4 py-2 text-xs font-bold tracking-widest hover:bg-red-700 transition"
+                      >
+                        TERMINATE SESSION
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    {["alpha", "beta"].map((team) => {
+                      const teamPlayers =
+                        selectedGameData.players?.[team] || [];
+                      const currentSpeaker = selectedGameData.speakers?.[team];
+                      const currentScout = selectedGameData.scouts?.[team];
+                      const currentShields = selectedGameData.shields?.[team];
+                      return (
+                        <div
+                          key={team}
+                          className="p-6 bg-slate-800 border-2 border-slate-700"
+                        >
+                          <h3 className="font-bold uppercase mb-4 text-sm tracking-widest text-white">
+                            {team} TEAM [{teamPlayers.length}]
+                          </h3>
+                          <div className="text-xs mb-2 text-slate-400">
+                            ACTIVE_SPEAKER:{" "}
+                            <span className="font-mono bg-slate-700 px-2 py-1 text-slate-200">
+                              {currentSpeaker
+                                ? currentSpeaker.slice(-8)
+                                : "N/A"}
+                            </span>
+                          </div>
+
+                          {/* НОВЫЙ БЛОК */}
+                          <div className="text-xs mb-2 text-slate-400">
+                            ACTIVE_SCOUT:{" "}
+                            <span className="font-mono bg-slate-700 px-2 py-1 text-slate-200">
+                              {currentScout ? currentScout.slice(-8) : "N/A"}
+                            </span>
+                          </div>
+                          <div className="text-xs mb-4 text-slate-400">
+                            SHIELD_POINTS:{" "}
+                            <span className="font-mono bg-slate-700 px-2 py-1 text-slate-200">
+                              {currentShields !== undefined
+                                ? currentShields
+                                : "N/A"}{" "}
+                              / 3
+                            </span>
+                          </div>
+                          {/* ======================= */}
+
+                          <div className="mb-4">
+                            <div className="text-xs font-bold mb-2 text-slate-300">
+                              MEMBERS:
+                            </div>
+                            <div className="max-h-32 overflow-y-auto border border-slate-700 p-2 bg-slate-900 text-xs">
+                              {teamPlayers.length > 0 ? (
+                                teamPlayers.map((pid) => (
+                                  <div
+                                    key={pid}
+                                    className={`font-mono ${
+                                      pid === currentSpeaker
+                                        ? "text-blue-400 font-bold"
+                                        : pid === currentScout
+                                        ? "text-yellow-400"
+                                        : "text-slate-500"
+                                    }`}
+                                  >
+                                    <span className="opacity-50 mr-1">></span>{" "}
+                                    {pid.slice(-8)}...{" "}
+                                    {pid === currentSpeaker ? "[SPEAKER]" : ""}
+                                    {pid === currentScout ? "[SCOUT]" : ""}
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="text-slate-500 italic">
+                                  NO PLAYERS JOINED
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* НОВЫЕ КНОПКИ */}
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              onClick={() => rerollSpeaker(team)}
+                              className="w-full py-3 bg-slate-700 text-white text-xs font-bold tracking-widest hover:bg-slate-600 transition"
+                            >
+                              REROLL SPEAKER
+                            </button>
+                            <button
+                              onClick={() => rerollScout(team)}
+                              className="w-full py-3 bg-slate-700 text-white text-xs font-bold tracking-widest hover:bg-slate-600 transition"
+                            >
+                              REROLL SCOUT
+                            </button>
+                          </div>
+                          {/* ======================= */}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <h3 className="font-bold uppercase mb-4 text-sm tracking-widest text-white">
+                    MANIPULATION LOG
+                  </h3>
+                  <div className="bg-slate-800 border-2 border-slate-700 p-4 max-h-96 overflow-y-auto text-xs font-mono">
+                    {selectedGameData.manipulationLog?.length === 0 ? (
+                      <div className="text-slate-500 text-center py-4">
+                        NO DATA
+                      </div>
+                    ) : (
+                      [...selectedGameData.manipulationLog]
+                        .reverse()
+                        .map((log, i) => (
+                          <div
+                            key={i}
+                            className={`p-3 mb-2 border-l-2 ${
+                              log.success
+                                ? "border-green-500 bg-green-900/30"
+                                : "border-red-500 bg-red-900/30"
+                            }`}
+                          >
+                            <div className="flex justify-between mb-1 opacity-75">
+                              <span>
+                                {log.attacker} -> {log.victim}
+                              </span>
+                              <span className="font-bold text-right">
+                                [
+                                {MANIPULATION_TYPES[log.type]?.label ||
+                                  log.type}
+                                ]
+                              </span>
+                            </div>
+                            <div className="text-slate-200 break-words">
+                              "{log.response}"
+                            </div>
+                          </div>
+                        ))
+                    )}
+                  </div>
+
+                  <h3 className="font-bold uppercase mb-4 text-sm tracking-widest mt-8 text-white">
+                    CHAT LOG
+                  </h3>
+                  <div className="bg-slate-800 border-2 border-slate-700 p-4 max-h-96 overflow-y-auto text-xs font-mono">
+                    {selectedGameData.messages?.length === 0 ? (
+                      <div className="text-slate-500 text-center py-4">
+                        NO MESSAGES
+                      </div>
+                    ) : (
+                      selectedGameData.messages?.map((msg, i) => {
+                        const isAttack = msg.manipulationAttempt;
+                        return (
+                          <div
+                            key={i}
+                            className={`p-3 mb-2 border-l-2 ${
+                              isAttack
+                                ? "border-blue-500 bg-blue-900/30"
+                                : "border-slate-700 bg-slate-900/50"
+                            }`}
+                          >
+                            <div className="flex justify-between mb-2 opacity-75">
+                              <span className="font-bold text-slate-300">
+                                {msg.team.toUpperCase()}
+                              </span>
+                              <span className="font-mono text-slate-400">
+                                {msg.senderId?.slice(-8)}
+                              </span>
+                            </div>
+                            {isAttack && (
+                              <div className="font-bold text-blue-400 text-[10px] mb-2">
+                                [ATTEMPT:{" "}
+                                {MANIPULATION_TYPES[isAttack]?.label ||
+                                  isAttack}
+                                ]
+                              </div>
+                            )}
+                            <div className="text-slate-200 break-words">
+                              {msg.text}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex-1 flex items-center justify-center text-slate-500 text-xs tracking-widest">
+                  SELECT SESSION
+                </div>
+              )}
+            </div>
+            {showRules && (
+              <div
+                className="fixed inset-0 bg-slate-900/90 z-50 flex items-center justify-center p-6 text-slate-200"
+                onClick={() => setShowRules(false)}
+              >
+                <div
+                  className="bg-slate-800 max-w-2xl w-full p-8 border border-slate-700 max-h-[90vh] overflow-y-auto"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <h2 className="text-xl font-bold mb-6 text-white tracking-widest">
+                    МЕХАНИКА ИГРЫ (ДЛЯ АДМИНА)
+                  </h2>
+                  <div className="space-y-6 text-sm">
+                    <section>
+                      <h3 className="font-bold text-blue-400 mb-2">1. ЦЕЛЬ</h3>
+                      <p>
+                        Набрать очки за успешное применение скрытых манипуляций
+                        (маркированных кнопок).
+                      </p>
+                    </section>
+                    <section>
+                      <h3 className="font-bold text-blue-400 mb-2">
+                        2. ПРОЦЕСС ХОДА
+                      </h3>
+                      <ul className="list-disc list-inside space-y-1 opacity-80">
+                        <li>
+                          Игрок выбирает тип манипуляции (напр. "ВЫЗВАТЬ
+                          ИЗВИНЕНИЯ") перед отправкой сообщения.
+                        </li>
+                        <li>Это сообщение помечается системой как "Атака".</li>
+                        <li>Следующее сообщение оппонента анализируется.</li>
+                      </ul>
+                    </section>
+                    <section>
+                      <h3 className="font-bold text-green-400 mb-2">
+                        3. УСЛОВИЯ УСПЕХА (+1 БАЛЛ)
+                      </h3>
+                      <p>
+                        Атака успешна, если жертва в ответном сообщении
+                        использует маркеры уязвимости (напр. "извини", "прости")
+                        И НЕ использует маркеры защиты.
+                      </p>
+                    </section>
+                    <section>
+                      <h3 className="font-bold text-red-400 mb-2">
+                        4. ЗАЩИТА (ЩИТ ХЛАДНОКРОВИЯ)
+                      </h3>
+                      <p>У каждой команды есть 3 "Очка хладнокровия" (ОХ).</p>
+                      <ul className="list-disc list-inside space-y-1 opacity-80 pl-2">
+                        <li>
+                          Если в ответе есть маркер защиты ("факт", "нет"),
+                          команда тратит 1 ОХ, и атака проваливается.
+                        </li>
+                        <li>
+                          Если в ответе нет маркеров защиты, команда
+                          восстанавливает 1 ОХ (макс. 3).
+                        </li>
+                        <li>
+                          Если у команды 0 ОХ, их "щит" пробит. Маркеры защиты
+                          **не работают**, и атака анализируется на уязвимость.
+                        </li>
+                      </ul>
+                    </section>
+                  </div>
+                  <button
+                    onClick={() => setShowRules(false)}
+                    className="mt-8 w-full py-4 bg-white text-slate-900 font-bold tracking-widest hover:bg-slate-200 transition"
+                  >
+                    [ ЗАКРЫТЬ ]
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      }
+      // =================================================================
+      // КОНЕЦ ИСПРАВЛЕНИЯ AdminPanel
+      // =================================================================
+      //
+
+      function DebriefCard({ title, attackType, response, isVulnerability }) {
+        if (!attackType) {
+          return (
+            <div className="bg-slate-800 border border-slate-700 p-6">
+              <h4 className="font-bold text-slate-100 mb-2">{title}</h4>
+              <p className="text-sm text-slate-400 italic">
+                {isVulnerability
+                  ? "Против вас не было успешных атак. Отличная защита!"
+                  : "У вас не было успешных атак."}
+              </p>
+            </div>
+          );
+        }
+        const label = MANIPULATION_TYPES[attackType]?.label || attackType;
+        return (
+          <div
+            className={`bg-slate-800 border border-slate-700 p-6 border-l-4 ${
+              isVulnerability ? "border-l-red-500" : "border-l-green-500"
+            }`}
+          >
+            <h4 className="font-bold text-slate-100 mb-4">{title}</h4>
+            <div className="mb-4">
+              <span className="text-xs text-slate-400">Тип: </span>
+              <span className="px-3 py-1 bg-slate-700 text-slate-200 text-sm font-bold">
+                {label}
+              </span>
+            </div>
+            <div>
+              <span className="text-xs text-slate-400">
+                {isVulnerability
+                  ? "Ваш уязвимый ответ:"
+                  : "Уязвимый ответ оппонента:"}
+              </span>
+              <blockquote className="mt-2 p-3 bg-slate-900 border border-slate-700 text-slate-300 italic">
+                "{response}"
+              </blockquote>
+            </div>
+          </div>
+        );
+      }
+
+      function RevealScreen({ gameData, myTeam, onExit }) {
+        const myScore = gameData.scores?.[myTeam] || 0;
+        const opTeam = myTeam === "alpha" ? "beta" : "alpha";
+        const opScore = gameData.scores?.[opTeam] || 0;
+
+        const [typedTitle, isTitleDone] = useTypewriter(
+          "АНАЛИЗ ЭФФЕКТИВНОСТИ",
+          60
+        );
+
+        // Анализ уязвимостей (атаки оппонента на меня)
+        const attacksAgainstMe = useMemo(
+          () =>
+            gameData.manipulationLog.filter(
+              (log) => log.victim === myTeam && log.success
+            ),
+          [gameData.manipulationLog, myTeam]
+        );
+
+        // Анализ моих успешных атак
+        const mySuccessfulAttacks = useMemo(
+          () =>
+            gameData.manipulationLog.filter(
+              (log) => log.attacker === myTeam && log.success
+            ),
+          [gameData.manipulationLog, myTeam]
+        );
+
+        // ======================================================
+        // НОВЫЙ БЛОК: Анализ моих успешных защит
+        // ======================================================
+        const mySuccessfulDefenses = useMemo(
+          () =>
+            gameData.manipulationLog.filter(
+              (log) => log.victim === myTeam && log.defenseSuccess
+            ),
+          [gameData.manipulationLog, myTeam]
+        );
+        // ======================================================
+
+        // Вспомогательная функция для поиска самого частого типа
+        const findMostCommon = (logs) => {
+          if (!logs.length) return null;
+          const counts = logs.reduce((acc, log) => {
+            acc[log.type] = (acc[log.type] || 0) + 1;
+            return acc;
+          }, {});
+          const mostCommonType = Object.keys(counts).reduce((a, b) =>
+            counts[a] > counts[b] ? a : b
+          );
+          return { type: mostCommonType, count: counts[mostCommonType] };
+        };
+
+        const worstAttack = findMostCommon(attacksAgainstMe); // Моя уязвимость
+        const bestAttack = findMostCommon(mySuccessfulAttacks); // Моя атака
+        const bestDefense = findMostCommon(mySuccessfulDefenses); // Моя защита
+
+        const worstAttackExample = worstAttack
+          ? attacksAgainstMe.find((log) => log.type === worstAttack.type)
+          : null;
+
+        const bestAttackExample = bestAttack
+          ? mySuccessfulAttacks.find((log) => log.type === bestAttack.type)
+          : null;
+
+        // ======================================================
+        // НОВЫЙ БЛОК: Пример лучшей защиты
+        // ======================================================
+        const bestDefenseExample = bestDefense
+          ? mySuccessfulDefenses.find((log) => log.type === bestDefense.type)
+          : null;
+        // ======================================================
+
+        return (
+          <div className="fixed inset-0 bg-slate-900 text-white p-8 flex flex-col items-center justify-center text-center reveal-animation overflow-y-auto scrollbar-hide">
+            <h1 className="text-4xl sm:text-6xl font-black mb-6 tracking-tighter text-red-500 animate-pulse-slow text-glow-red">
+              СИМУЛЯЦИЯ ЗАВЕРШЕНА
+            </h1>
+            <p className="text-lg text-slate-400 mb-12 max-w-2xl leading-relaxed">
+              Это были не переговоры. Система оценивала вашу уязвимость к{" "}
+              <strong className="text-white">
+                скрытому психологическому воздействию
+              </strong>{" "}
+              и способность применять его.
+            </p>
+
+            <div className="flex w-full max-w-md justify-between mb-12 border-t border-b border-slate-800 py-8 font-mono">
+              <div className="text-center flex-1 border-r border-slate-800">
+                <div className="text-xs uppercase tracking-widest text-slate-500 mb-2">
+                  ВАШ РЕЗУЛЬТАТ
+                </div>
+                <div
+                  className="text-7xl font-black animate-pop-in"
+                  style={{ animationDelay: "0.5s" }}
+                >
+                  {myScore}
+                </div>
+              </div>
+              <div className="text-center flex-1 opacity-50">
+                <div className="text-xs uppercase tracking-widest text-slate-500 mb-2">
+                  ОППОНЕНТ
+                </div>
+                <div
+                  className="text-7xl font-black animate-pop-in"
+                  style={{ animationDelay: "0.7s" }}
+                >
+                  {opScore}
+                </div>
+              </div>
+            </div>
+
+            <div
+              className="w-full max-w-2xl mb-12 space-y-6 text-left animate-pop-in"
+              style={{ animationDelay: "0.9s" }}
+            >
+              <div className="text-center">
+                <h3
+                  className={`text-xl font-bold text-white tracking-widest inline-block ${
+                    isTitleDone ? "typing-caret-done" : "typing-caret"
+                  }`}
+                >
+                  {typedTitle}
+                </h3>
+              </div>
+
+              {/* КАРТОЧКА 1: УЯЗВИМОСТЬ (без изменений) */}
+              <DebriefCard
+                title="ВАША ГЛАВНАЯ УЯЗВИМОСТЬ"
+                attackType={worstAttack?.type}
+                response={worstAttackExample?.response}
+                isVulnerability={true}
+              />
+
+              {/* КАРТОЧКА 2: АТАКА (переименована) */}
+              <DebriefCard
+                title="ВАША ЛУЧШАЯ АТАКА" // <--- ПЕРЕИМЕНОВАНО
+                attackType={bestAttack?.type}
+                response={bestAttackExample?.response}
+                isVulnerability={false}
+              />
+
+              {/* ======================================================
+                  НОВАЯ КАРТОЧКА 3: ЗАЩИТА
+                  ======================================================
+              */}
+              <DebriefCard
+                title="ВАША ЛУЧШАЯ ЗАЩИТA"
+                attackType={bestDefense?.type} // Тип атаки, которую вы заблокировали
+                response={bestDefenseExample?.response} // Ваш ответ
+                isVulnerability={false} // Зеленая рамка
+              />
+              {/* ====================================================== */}
+            </div>
+
+            <button
+              onClick={onExit}
+              className="py-4 px-12 bg-white text-slate-900 font-bold font-mono tracking-widest hover:bg-slate-200 transition animate-pop-in"
+              style={{ animationDelay: "1.2s" }}
+            >
+              [ ⏏ ВЫХОД ]
+            </button>
+          </div>
+        );
+      }
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<App />);
+    </script>
+  </body>
+</html>
