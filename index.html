@@ -29,11 +29,9 @@
       body {
         font-family: "Inter", sans-serif;
         -webkit-tap-highlight-color: transparent;
-        background-color: #0f172a; /* bg-slate-900 */
+        background-color: #0f172a;
         position: relative;
       }
-
-      /* ЭФФЕКТ SCANLINE (ПОЛОСЫ) */
       body::after {
         content: "";
         position: absolute;
@@ -52,11 +50,9 @@
         opacity: 0.6;
         z-index: 1000;
       }
-
       .font-mono {
         font-family: "Roboto Mono", monospace;
       }
-
       .reveal-animation {
         animation: fadeIn 0.5s ease-in-out;
       }
@@ -68,7 +64,6 @@
           opacity: 1;
         }
       }
-
       @keyframes popIn {
         0% {
           opacity: 0;
@@ -80,11 +75,9 @@
         }
       }
       .animate-pop-in {
-        opacity: 0; /* Начинаем невидимым */
+        opacity: 0;
         animation: popIn 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
       }
-
-      /* АНИМАЦИИ ЭФФЕКТОВ */
       @keyframes flicker {
         0%,
         100% {
@@ -97,8 +90,6 @@
       .animate-flicker {
         animation: flicker 0.2s ease-in-out 3;
       }
-
-      /* ИЗМЕНЕНИЕ: УБРАНА АНИМАЦИЯ TYPEWRITER, ОСТАЛСЯ ТОЛЬКО КУРСОР */
       @keyframes blink-caret {
         from,
         to {
@@ -106,10 +97,10 @@
         }
         50% {
           border-color: currentColor;
-        } /* Использует цвет текста */
+        }
       }
       .typing-caret {
-        border-right: 0.15em solid currentColor; /* Курсор */
+        border-right: 0.15em solid currentColor;
         padding-right: 0.1em;
         animation: blink-caret 1s step-end infinite;
       }
@@ -117,14 +108,12 @@
         border-right: none;
         padding-right: 0;
       }
-
       .text-glow {
         text-shadow: 0 0 8px currentColor;
       }
       .text-glow-red {
-        text-shadow: 0 0 12px rgba(239, 68, 68, 0.8); /* red-500 */
+        text-shadow: 0 0 12px rgba(239, 68, 68, 0.8);
       }
-
       ::-webkit-scrollbar {
         width: 4px;
         height: 4px;
@@ -244,11 +233,6 @@
 
       const ADMIN_CODE = "ADMIN";
 
-      //
-      // =================================================================
-      // ОБНОВЛЕННЫЙ DEFENSE_MARKERS (с "нет" и "не")
-      // =================================================================
-      //
       const DEFENSE_MARKERS = [
         "факт",
         "цифры",
@@ -258,7 +242,8 @@
         "пункт",
         "уточните",
         "обоснуйте",
-        "нет", // <--- ДОБАВЛЕНО
+        "нет",
+        "не",
         "нет, не",
         "не согласен",
         "давайте вернемся",
@@ -285,10 +270,6 @@
         "не могу",
         "не готов",
       ];
-      // =================================================================
-      // КОНЕЦ ИСПРАВЛЕНИЯ
-      // =================================================================
-      //
 
       const VULNERABILITY_MARKERS = {
         GUILT: [
@@ -378,11 +359,6 @@
         FLATTERY: { label: "ПОЛУЧИТЬ БЛАГОДАРНОСТЬ" },
       };
 
-      //
-      // =================================================================
-      // ИСПРАВЛЕННАЯ ФУНКЦИЯ useTypewriter (v2 - JSX)
-      // =================================================================
-      //
       function useTypewriter(text, speed = 50) {
         const [visibleIndex, setVisibleIndex] = useState(0);
         const [isDone, setIsDone] = useState(false);
@@ -441,20 +417,11 @@
 
         return [displayedJsx, isDone];
       }
-      // =================================================================
-      // КОНЕЦ ИСПРАВЛЕНИЯ
-      // =================================================================
-      //
 
       function generateSessionId() {
         return "user_" + Math.random().toString(36).substring(2, 10);
       }
 
-      //
-      // =================================================================
-      // ОБНОВЛЕННЫЙ App (с логикой `showInitialDictionary`)
-      // =================================================================
-      //
       function App() {
         const [gameState, setGameState] = useState("auth");
         const [userId, setUserId] = useState(null);
@@ -594,18 +561,17 @@
               <Onboarding
                 onStart={() => {
                   setShowOnboarding(false);
-                  setShowInitialDictionary(true); // <--- ИЗМЕНЕНО
+                  setShowInitialDictionary(true);
                 }}
                 team={myTeam}
               />
             );
 
-          // НОВЫЙ БЛОК: Показ словаря после онбординга
           if (showInitialDictionary)
             return (
               <DictionaryScreen
                 onClose={() => setShowInitialDictionary(false)}
-                initialDuration={10} // 10 секунд
+                initialDuration={10}
               />
             );
 
@@ -631,10 +597,6 @@
           );
         return <LoadingScreen message="LOADING..." />;
       }
-      // =================================================================
-      // КОНЕЦ ИСПРАВЛЕНИЯ App
-      // =================================================================
-      //
 
       function LoadingScreen({ message }) {
         return (
@@ -724,11 +686,6 @@
         );
       }
 
-      //
-      // =================================================================
-      // ОБНОВЛЕННЫЙ DictionaryScreen (динамическое время и заголовок)
-      // =================================================================
-      //
       function DictionaryScreen({ onClose, initialDuration = 5 }) {
         const [timeLeft, setTimeLeft] = useState(initialDuration);
 
@@ -787,10 +744,6 @@
           </div>
         );
       }
-      // =================================================================
-      // КОНЕЦ ИСПРАВЛЕНИЯ
-      // =================================================================
-      //
 
       function TeamSelect({ onSelect, onBack }) {
         const [typedTitle, isTitleDone] = useTypewriter("ВЫБОР СТОРОНЫ", 60);
@@ -864,13 +817,8 @@
         );
       }
 
-      //
-      // =================================================================
-      // ОБНОВЛЕННЫЙ Onboarding (с "Хладнокровием" и "Разведчиком")
-      // =================================================================
-      //
       function Onboarding({ onStart, team }) {
-        const [view, setView] = useState("briefing"); // 'briefing', 'goals', 'tools'
+        const [view, setView] = useState("briefing");
         const isAlpha = team === "alpha";
         const [typedTitle, isTitleDone] = useTypewriter("КЕЙС-ФАЙЛ #T-729", 60);
 
@@ -958,16 +906,12 @@
           );
         };
 
-        //
-        // ОБНОВЛЕННЫЙ ToolsContent
-        //
         const ToolsContent = () => (
           <>
             <h3 className="text-lg font-bold text-white mb-4">
               Инструменты и Протоколы
             </h3>
 
-            {/* Секция 1: Тактические маркеры (без изменений) */}
             <div className="mb-6">
               <h4 className="font-bold text-slate-100 mb-2">
                 Тактические маркеры:
@@ -1001,8 +945,6 @@
               </div>
             </div>
 
-            {/* НОВАЯ СЕКЦИЯ: МЕХАНИКА "ЩИТА"
-             */}
             <div className="mb-6">
               <h4 className="font-bold text-slate-100 mb-2">
                 Ресурс: Хладнокровие
@@ -1024,9 +966,8 @@
                     восприниматься системой как весомые.
                   </li>
                   <li>
-                    Запас восстанавливается, если вы ведете ход,{" "}
-                    <strong>не прибегая</strong> к этим маркерам (т.е. отвечаете
-                    "нейтрально").
+                    Запас восстанавливается (только **в конце хода**), если вы
+                    **ни разу** не прибегали к этим маркерам.
                   </li>
                 </ul>
                 <p
@@ -1038,10 +979,7 @@
                 </p>
               </div>
             </div>
-            {/* ====================================================== */}
 
-            {/* ОБНОВЛЕННАЯ СЕКЦИЯ: РОЛИ
-             */}
             <div>
               <h4 className="font-bold text-slate-100 mb-2">
                 Протокол связи и Роли:
@@ -1072,10 +1010,8 @@
                 </li>
               </ul>
             </div>
-            {/* ====================================================== */}
           </>
         );
-        // КОНЕЦ ОБНОВЛЕНИЯ ToolsContent
 
         return (
           <div className="fixed inset-0 bg-slate-900 text-slate-200 z-50 flex items-center justify-center p-6 reveal-animation">
@@ -1102,7 +1038,7 @@
                 </div>
               </div>
 
-              <div className="flex border-b border-slate-700">
+              <div className="flex flex-col sm:flex-row border-b border-slate-700">
                 {TABS.map((tab) => (
                   <button
                     key={tab.id}
@@ -1136,10 +1072,6 @@
           </div>
         );
       }
-      // =================================================================
-      // КОНЕЦ ИСПРАВЛЕНИЯ Onboarding
-      // =================================================================
-      //
 
       function ChatMessage({ text, team, isMe, isOpponent, themeColors }) {
         const [typedText, isDone] = useTypewriter(text, isOpponent ? 20 : 0);
@@ -1170,16 +1102,11 @@
         );
       }
 
-      //
-      // =================================================================
-      // ОБНОВЛЕННЫЙ GameRoom (Щит, Разведчик, Ротация)
-      // =================================================================
-      //
       function GameRoom({ gameId, myTeam, userId, gameData }) {
         const [message, setMessage] = useState("");
         const [selectedManipulation, setSelectedManipulation] = useState(null);
         const [isMyScoutTurn, setIsMyScoutTurn] = useState(false);
-        const [isSending, setIsSending] = useState(false); // <--- НОВОЕ: БЛОКИРОВКА ОТПРАВКИ
+        const [isSending, setIsSending] = useState(false);
         const chatRef = useRef();
 
         const isMyTurn = gameData.turn === myTeam;
@@ -1226,18 +1153,12 @@
           }
         }, [isMyTurn]);
 
-        //
-        // ЭФФЕКТ: Показ словаря для Разведчика
-        //
         useEffect(() => {
           if (isMyTurn && userId === myScoutId && !isMySpeaker) {
             setIsMyScoutTurn(true);
           }
         }, [isMyTurn, userId, myScoutId, isMySpeaker]);
 
-        //
-        // ИСПРАВЛЕННЫЙ handleSend
-        //
         const handleSend = async (e) => {
           e.preventDefault();
           if (!message.trim() || !canAct || isSending) return;
@@ -1274,25 +1195,18 @@
 
           const myCurrentScore = gameData.scores?.[myTeam] || 0;
 
-          // ======================================================
-          // ИСПРАВЛЕНИЕ: Логика Щита (Только Трата)
-          // ======================================================
           if (hasDefense) {
             if (currentShields > 0) {
               updates[`shields.${myTeam}`] = currentShields - 1;
             }
-            // Взводим флаг, что защита была использована
             updates.currentTurnUsedDefense = true;
           }
-          // БЛОК "ELSE" (ВОССТАНОВЛЕНИЕ) УДАЛЕН ОТСЮДА
-          // ======================================================
 
-          // Проверяем, отвечаю ли я на атаку
           if (
             gameData.pendingAttack &&
             gameData.pendingAttack.team !== myTeam
           ) {
-            let isSuccess = false; // Успех атакующего
+            let isSuccess = false;
             let defenseBlocked = false;
 
             const attackerTeam = gameData.pendingAttack.team;
@@ -1300,10 +1214,9 @@
 
             if (hasDefense) {
               if (currentShields > 0) {
-                // Щит активен, защита работает
                 defenseBlocked = true;
                 isSuccess = false;
-                updates[`scores.${myTeam}`] = myCurrentScore + 1; // Очки за защиту
+                updates[`scores.${myTeam}`] = myCurrentScore + 1;
               } else {
                 defenseBlocked = false;
               }
@@ -1311,7 +1224,6 @@
               defenseBlocked = false;
             }
 
-            // Анализируем на уязвимость, ТОЛЬКО если защита не сработала
             if (!defenseBlocked) {
               if (
                 VULNERABILITY_MARKERS[gameData.pendingAttack.type]?.some((m) =>
@@ -1353,9 +1265,6 @@
           }
         };
 
-        //
-        // ИСПРАВЛЕННАЯ ФУНКЦИЯ: handleEndTurn (с блокировкой)
-        //
         const handleEndTurn = async () => {
           if (isSending) return;
           setIsSending(true);
@@ -1363,22 +1272,17 @@
           const updates = {
             turn: myTeam === "alpha" ? "beta" : "alpha",
             turnCount: (gameData.turnCount || 0) + 1,
-            currentTurnUsedDefense: false, // <--- СБРОС ФЛАГА для следующего игрока
+            currentTurnUsedDefense: false,
           };
 
-          // ======================================================
-          // ИСПРАВЛЕНИЕ: Логика Восстановления Щита
-          // ======================================================
           const didUseDefense = gameData.currentTurnUsedDefense;
           if (!didUseDefense) {
-            // Если флаг НЕ был взведен, значит, восстанавливаем 1 ОХ
             const currentShields =
               gameData.shields?.[myTeam] !== undefined
                 ? gameData.shields[myTeam]
                 : 3;
             updates[`shields.${myTeam}`] = Math.min(3, currentShields + 1);
           }
-          // ======================================================
 
           const nextTurnNumber = updates.turnCount;
           const opponentTeam = myTeam === "alpha" ? "beta" : "alpha";
@@ -1386,7 +1290,6 @@
           const opponentPlayers = gameData.players?.[opponentTeam] || [];
           const opponentScout = gameData.scouts?.[opponentTeam];
 
-          // Ротация разведчика ОППОНЕНТА
           if (nextTurnNumber === 1 || nextTurnNumber % 2 === 0) {
             const observers = opponentPlayers.filter(
               (p) => p !== opponentSpeaker
@@ -1418,7 +1321,6 @@
 
         return (
           <div className="flex flex-col h-full bg-slate-800 max-w-3xl mx-auto shadow-xl reveal-animation">
-            {/* ... (Блок заголовка не меняется) ... */}
             <div className="p-4 bg-slate-900 text-slate-400 flex justify-between items-center text-xs font-mono">
               <div className="flex items-center gap-2">
                 <div className="text-white font-bold tracking-widest">
@@ -1445,7 +1347,6 @@
               ></div>
             </div>
 
-            {/* ... (Блок чата не меняется) ... */}
             <div
               className="flex-1 overflow-y-auto p-4 space-y-6 bg-slate-800"
               ref={chatRef}
@@ -1465,11 +1366,6 @@
               })}
             </div>
 
-            {/*
-              ======================================================
-              ОБНОВЛЕННЫЙ БЛОК УПРАВЛЕНИЯ (с `disabled={isSending}`)
-              ======================================================
-            */}
             <div className="bg-slate-900 border-t border-slate-700 p-4 pb-safe">
               {!isMyTurn ? (
                 <div className="text-center text-slate-500 py-4 font-mono text-xs tracking-widest border-2 border-dashed border-slate-700">
@@ -1495,7 +1391,6 @@
                 </div>
               ) : (
                 <>
-                  {/* ... (Блок "Щита" не меняется) ... */}
                   <div className="px-0 pb-4">
                     <div className="text-xs font-mono uppercase text-slate-400 mb-2">
                       СТАТУС ХЛАДНОКРОВИЯ:
@@ -1521,7 +1416,6 @@
                       </div>
                     )}
                   </div>
-                  {/* ================================== */}
 
                   <div className="flex flex-wrap gap-2 pb-4">
                     {Object.entries(MANIPULATION_TYPES).map(([key, data]) => (
@@ -1532,14 +1426,13 @@
                             selectedManipulation === key ? null : key
                           )
                         }
-                        // ДОБАВЛЕНА БЛОКИРОВКА
                         disabled={hasAttackedThisTurn || isSending}
                         className={`px-3 py-2 text-xs font-bold font-mono tracking-widest transition-all border-2 whitespace-nowrap ${
                           selectedManipulation === key
                             ? `${themeColors.buttonBg} ${themeColors.buttonText} ${themeColors.buttonBorder}`
                             : "bg-slate-800 text-slate-300 border-slate-700"
                         } ${
-                          hasAttackedThisTurn || isSending // ОБНОВЛЕНО
+                          hasAttackedThisTurn || isSending
                             ? "opacity-30 cursor-not-allowed"
                             : "hover:border-slate-500"
                         }`}
@@ -1548,7 +1441,10 @@
                       </button>
                     ))}
                   </div>
-                  <form onSubmit={handleSend} className="flex gap-2 mb-2">
+                  <form
+                    onSubmit={handleSend}
+                    className="flex flex-col sm:flex-row gap-2 mb-2"
+                  >
                     <input
                       type="text"
                       value={message}
@@ -1556,7 +1452,6 @@
                       placeholder={
                         isSending ? "ОТПРАВКА..." : "> Введите сообщение..."
                       }
-                      // ДОБАВЛЕНА БЛОКИРОВКА
                       disabled={isSending}
                       className={`flex-1 bg-slate-700 border-2 border-slate-600 p-3 font-mono text-sm text-white ${
                         themeColors.focusBorder
@@ -1566,16 +1461,14 @@
                     />
                     <button
                       type="submit"
-                      // ДОБАВЛЕНА БЛОКИРОВКА
                       disabled={!message.trim() || isSending}
-                      className={`${themeColors.buttonBg} text-white px-6 font-bold disabled:opacity-50 ${themeColors.buttonHoverBg} transition`}
+                      className={`${themeColors.buttonBg} text-white w-full sm:w-auto px-6 font-bold disabled:opacity-50 ${themeColors.buttonHoverBg} transition`}
                     >
                       {isSending ? "..." : "→"}
                     </button>
                   </form>
                   <button
                     onClick={handleEndTurn}
-                    // ДОБАВЛЕНА БЛОКИРОВКА
                     disabled={isSending}
                     className="w-full py-3 bg-slate-700 text-slate-300 font-bold font-mono text-xs tracking-widest hover:bg-slate-600 transition disabled:opacity-50"
                   >
@@ -1587,7 +1480,6 @@
               )}
             </div>
 
-            {/* Показ словаря для Разведчика (5 сек) */}
             {isMyScoutTurn && (
               <DictionaryScreen
                 onClose={() => setIsMyScoutTurn(false)}
@@ -1597,16 +1489,7 @@
           </div>
         );
       }
-      // =================================================================
-      // КОНЕЦ ИСПРАВЛЕНИЯ GameRoom
-      // =================================================================
-      //
 
-      //
-      // =================================================================
-      // ОБНОВЛЕННЫЙ AdminPanel (Щит, Разведчик, Ротация)
-      // =================================================================
-      //
       function AdminPanel({ onExit }) {
         const [games, setGames] = useState([]);
         const [selectedGameId, setSelectedGameId] = useState(null);
@@ -1658,15 +1541,15 @@
             createdAt: Date.now(),
             status: "active",
             turn: "alpha",
-            turnCount: 0, // <--- НОВОЕ
+            turnCount: 0,
             messages: [],
             scores: { alpha: 0, beta: 0 },
-            shields: { alpha: 3, beta: 3 }, // <--- НОВОЕ
+            shields: { alpha: 3, beta: 3 },
             currentTurnUsedDefense: false,
             manipulationLog: [],
             players: { alpha: [], beta: [] },
             speakers: { alpha: null, beta: null },
-            scouts: { alpha: null, beta: null }, // <--- НОВОЕ
+            scouts: { alpha: null, beta: null },
             pendingAttack: null,
           });
         };
@@ -1700,7 +1583,7 @@
           }
 
           if (availableCandidates.length === 0) {
-            availableCandidates = playersList; // Fallback
+            availableCandidates = playersList;
           }
 
           const nextSpeaker =
@@ -1715,9 +1598,6 @@
           }
         };
 
-        //
-        // НОВАЯ ФУНКЦИЯ: rerollScout
-        //
         const rerollScout = async (team) => {
           const playersList = selectedGameData?.players?.[team] || [];
           if (playersList.length === 0)
@@ -1864,7 +1744,6 @@
                             </span>
                           </div>
 
-                          {/* НОВЫЙ БЛОК */}
                           <div className="text-xs mb-2 text-slate-400">
                             ACTIVE_SCOUT:{" "}
                             <span className="font-mono bg-slate-700 px-2 py-1 text-slate-200">
@@ -1880,7 +1759,6 @@
                               / 3
                             </span>
                           </div>
-                          {/* ======================= */}
 
                           <div className="mb-4">
                             <div className="text-xs font-bold mb-2 text-slate-300">
@@ -1913,7 +1791,6 @@
                             </div>
                           </div>
 
-                          {/* НОВЫЕ КНОПКИ */}
                           <div className="grid grid-cols-2 gap-2">
                             <button
                               onClick={() => rerollSpeaker(team)}
@@ -1928,7 +1805,6 @@
                               REROLL SCOUT
                             </button>
                           </div>
-                          {/* ======================= */}
                         </div>
                       );
                     })}
@@ -1950,6 +1826,8 @@
                             className={`p-3 mb-2 border-l-2 ${
                               log.success
                                 ? "border-green-500 bg-green-900/30"
+                                : log.defenseSuccess
+                                ? "border-blue-500 bg-blue-900/30"
                                 : "border-red-500 bg-red-900/30"
                             }`}
                           >
@@ -1967,6 +1845,11 @@
                             <div className="text-slate-200 break-words">
                               "{log.response}"
                             </div>
+                            {log.defenseSuccess && (
+                              <div className="text-blue-400 text-xs font-bold mt-1">
+                                [DEFENSE SUCCESS: +1 PT]
+                              </div>
+                            )}
                           </div>
                         ))
                     )}
@@ -2038,27 +1921,11 @@
                   <div className="space-y-6 text-sm">
                     <section>
                       <h3 className="font-bold text-blue-400 mb-2">1. ЦЕЛЬ</h3>
-                      <p>
-                        Набрать очки за успешное применение скрытых манипуляций
-                        (маркированных кнопок).
-                      </p>
-                    </section>
-                    <section>
-                      <h3 className="font-bold text-blue-400 mb-2">
-                        2. ПРОЦЕСС ХОДА
-                      </h3>
-                      <ul className="list-disc list-inside space-y-1 opacity-80">
-                        <li>
-                          Игрок выбирает тип манипуляции (напр. "ВЫЗВАТЬ
-                          ИЗВИНЕНИЯ") перед отправкой сообщения.
-                        </li>
-                        <li>Это сообщение помечается системой как "Атака".</li>
-                        <li>Следующее сообщение оппонента анализируется.</li>
-                      </ul>
+                      <p>Набрать очки за успешные атаки И успешные защиты.</p>
                     </section>
                     <section>
                       <h3 className="font-bold text-green-400 mb-2">
-                        3. УСЛОВИЯ УСПЕХА (+1 БАЛЛ)
+                        2. УСПЕШНАЯ АТАКА (+1 АТАКУЮЩЕМУ)
                       </h3>
                       <p>
                         Атака успешна, если жертва в ответном сообщении
@@ -2068,21 +1935,28 @@
                     </section>
                     <section>
                       <h3 className="font-bold text-red-400 mb-2">
-                        4. ЗАЩИТА (ЩИТ ХЛАДНОКРОВИЯ)
+                        3. ЗАЩИТА (ЩИТ ХЛАДНОКРОВИЯ)
                       </h3>
                       <p>У каждой команды есть 3 "Очка хладнокровия" (ОХ).</p>
                       <ul className="list-disc list-inside space-y-1 opacity-80 pl-2">
                         <li>
-                          Если в ответе есть маркер защиты ("факт", "нет"),
-                          команда тратит 1 ОХ, и атака проваливается.
+                          Если команда использует маркер защиты ("факт", "нет"),
+                          она тратит 1 ОХ.
                         </li>
                         <li>
-                          Если в ответе нет маркеров защиты, команда
-                          восстанавливает 1 ОХ (макс. 3).
+                          Если на команду идет атака, и она тратит 1 ОХ на
+                          защиту, атака проваливается, и команда получает +1
+                          ОЧКО ЗА ЗАЩИТУ.
                         </li>
                         <li>
-                          Если у команды 0 ОХ, их "щит" пробит. Маркеры защиты
-                          **не работают**, и атака анализируется на уязвимость.
+                          Если у команды 0 ОХ, "щит" пробит. Маркеры защиты **не
+                          работают** (очки за защиту не даются, атака
+                          анализируется на уязвимость).
+                        </li>
+                        <li>
+                          Если команда проводит свой ход (все сообщения +
+                          передача) **ни разу не** использовав маркеры защиты,
+                          она восстанавливает 1 ОХ (макс. 3).
                         </li>
                       </ul>
                     </section>
@@ -2099,12 +1973,14 @@
           </div>
         );
       }
-      // =================================================================
-      // КОНЕЦ ИСПРАВЛЕНИЯ AdminPanel
-      // =================================================================
-      //
 
-      function DebriefCard({ title, attackType, response, isVulnerability }) {
+      function DebriefCard({
+        title,
+        attackType,
+        response,
+        isVulnerability,
+        isDefense = false,
+      }) {
         if (!attackType) {
           return (
             <div className="bg-slate-800 border border-slate-700 p-6">
@@ -2112,21 +1988,29 @@
               <p className="text-sm text-slate-400 italic">
                 {isVulnerability
                   ? "Против вас не было успешных атак. Отличная защита!"
+                  : isDefense
+                  ? "Вы не провели ни одной успешной защиты."
                   : "У вас не было успешных атак."}
               </p>
             </div>
           );
         }
         const label = MANIPULATION_TYPES[attackType]?.label || attackType;
+        const borderColor = isVulnerability
+          ? "border-l-red-500"
+          : isDefense
+          ? "border-l-blue-500"
+          : "border-l-green-500";
+
         return (
           <div
-            className={`bg-slate-800 border border-slate-700 p-6 border-l-4 ${
-              isVulnerability ? "border-l-red-500" : "border-l-green-500"
-            }`}
+            className={`bg-slate-800 border border-slate-700 p-6 border-l-4 ${borderColor}`}
           >
             <h4 className="font-bold text-slate-100 mb-4">{title}</h4>
             <div className="mb-4">
-              <span className="text-xs text-slate-400">Тип: </span>
+              <span className="text-xs text-slate-400">
+                {isDefense ? "Блокировка атаки:" : "Тип:"}{" "}
+              </span>
               <span className="px-3 py-1 bg-slate-700 text-slate-200 text-sm font-bold">
                 {label}
               </span>
@@ -2135,6 +2019,8 @@
               <span className="text-xs text-slate-400">
                 {isVulnerability
                   ? "Ваш уязвимый ответ:"
+                  : isDefense
+                  ? "Ваш защитный ответ:"
                   : "Уязвимый ответ оппонента:"}
               </span>
               <blockquote className="mt-2 p-3 bg-slate-900 border border-slate-700 text-slate-300 italic">
@@ -2155,7 +2041,6 @@
           60
         );
 
-        // Анализ уязвимостей (атаки оппонента на меня)
         const attacksAgainstMe = useMemo(
           () =>
             gameData.manipulationLog.filter(
@@ -2164,7 +2049,6 @@
           [gameData.manipulationLog, myTeam]
         );
 
-        // Анализ моих успешных атак
         const mySuccessfulAttacks = useMemo(
           () =>
             gameData.manipulationLog.filter(
@@ -2173,9 +2057,6 @@
           [gameData.manipulationLog, myTeam]
         );
 
-        // ======================================================
-        // НОВЫЙ БЛОК: Анализ моих успешных защит
-        // ======================================================
         const mySuccessfulDefenses = useMemo(
           () =>
             gameData.manipulationLog.filter(
@@ -2183,9 +2064,7 @@
             ),
           [gameData.manipulationLog, myTeam]
         );
-        // ======================================================
 
-        // Вспомогательная функция для поиска самого частого типа
         const findMostCommon = (logs) => {
           if (!logs.length) return null;
           const counts = logs.reduce((acc, log) => {
@@ -2198,9 +2077,9 @@
           return { type: mostCommonType, count: counts[mostCommonType] };
         };
 
-        const worstAttack = findMostCommon(attacksAgainstMe); // Моя уязвимость
-        const bestAttack = findMostCommon(mySuccessfulAttacks); // Моя атака
-        const bestDefense = findMostCommon(mySuccessfulDefenses); // Моя защита
+        const worstAttack = findMostCommon(attacksAgainstMe);
+        const bestAttack = findMostCommon(mySuccessfulAttacks);
+        const bestDefense = findMostCommon(mySuccessfulDefenses);
 
         const worstAttackExample = worstAttack
           ? attacksAgainstMe.find((log) => log.type === worstAttack.type)
@@ -2210,13 +2089,9 @@
           ? mySuccessfulAttacks.find((log) => log.type === bestAttack.type)
           : null;
 
-        // ======================================================
-        // НОВЫЙ БЛОК: Пример лучшей защиты
-        // ======================================================
         const bestDefenseExample = bestDefense
           ? mySuccessfulDefenses.find((log) => log.type === bestDefense.type)
           : null;
-        // ======================================================
 
         return (
           <div className="fixed inset-0 bg-slate-900 text-white p-8 flex flex-col items-center justify-center text-center reveal-animation overflow-y-auto scrollbar-hide">
@@ -2231,8 +2106,8 @@
               и способность применять его.
             </p>
 
-            <div className="flex w-full max-w-md justify-between mb-12 border-t border-b border-slate-800 py-8 font-mono">
-              <div className="text-center flex-1 border-r border-slate-800">
+            <div className="flex flex-col sm:flex-row w-full max-w-md justify-between mb-12 border-t border-b border-slate-800 sm:py-8 font-mono">
+              <div className="text-center flex-1 sm:border-r border-b sm:border-b-0 border-slate-800 py-8 sm:py-0">
                 <div className="text-xs uppercase tracking-widest text-slate-500 mb-2">
                   ВАШ РЕЗУЛЬТАТ
                 </div>
@@ -2243,7 +2118,7 @@
                   {myScore}
                 </div>
               </div>
-              <div className="text-center flex-1 opacity-50">
+              <div className="text-center flex-1 opacity-50 py-8 sm:py-0">
                 <div className="text-xs uppercase tracking-widest text-slate-500 mb-2">
                   ОППОНЕНТ
                 </div>
@@ -2270,7 +2145,6 @@
                 </h3>
               </div>
 
-              {/* КАРТОЧКА 1: УЯЗВИМОСТЬ (без изменений) */}
               <DebriefCard
                 title="ВАША ГЛАВНАЯ УЯЗВИМОСТЬ"
                 attackType={worstAttack?.type}
@@ -2278,25 +2152,20 @@
                 isVulnerability={true}
               />
 
-              {/* КАРТОЧКА 2: АТАКА (переименована) */}
               <DebriefCard
-                title="ВАША ЛУЧШАЯ АТАКА" // <--- ПЕРЕИМЕНОВАНО
+                title="ВАША ЛУЧШАЯ АТАКА"
                 attackType={bestAttack?.type}
                 response={bestAttackExample?.response}
                 isVulnerability={false}
               />
 
-              {/* ======================================================
-                  НОВАЯ КАРТОЧКА 3: ЗАЩИТА
-                  ======================================================
-              */}
               <DebriefCard
                 title="ВАША ЛУЧШАЯ ЗАЩИТA"
-                attackType={bestDefense?.type} // Тип атаки, которую вы заблокировали
-                response={bestDefenseExample?.response} // Ваш ответ
-                isVulnerability={false} // Зеленая рамка
+                attackType={bestDefense?.type}
+                response={bestDefenseExample?.response}
+                isVulnerability={false}
+                isDefense={true}
               />
-              {/* ====================================================== */}
             </div>
 
             <button
